@@ -1,0 +1,13 @@
+package toanweb2.DoAnWeb2;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class DoAnWeb2Application {
+
+	public static void main(String[] args) {
+		SpringApplication.run(DoAnWeb2Application.class, args);
+	}
+
+}
