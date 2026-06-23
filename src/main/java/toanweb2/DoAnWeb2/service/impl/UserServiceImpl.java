@@ -1,6 +1,7 @@
 package toanweb2.DoAnWeb2.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import toanweb2.DoAnWeb2.entity.User;
 import toanweb2.DoAnWeb2.repository.UserRepository;
@@ -14,6 +15,7 @@ import java.util.Optional;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public List<User> findAll() {
@@ -37,6 +39,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User save(User user) {
+        // Mã hóa mật khẩu trước khi lưu
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
 
@@ -77,11 +81,11 @@ public class UserServiceImpl implements UserService {
     public void changePassword(Long id, String oldPassword, String newPassword) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản với ID: " + id));
-        // So sánh mật khẩu cũ (sau này thêm BCrypt)
-        if (!user.getPassword().equals(oldPassword)) {
+        // So sánh mật khẩu cũ bằng BCrypt
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
             throw new RuntimeException("Mật khẩu cũ không đúng");
         }
-        user.setPassword(newPassword);
+        user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
     }
 
@@ -95,3 +99,4 @@ public class UserServiceImpl implements UserService {
         return userRepository.existsByEmail(email);
     }
 }
+
