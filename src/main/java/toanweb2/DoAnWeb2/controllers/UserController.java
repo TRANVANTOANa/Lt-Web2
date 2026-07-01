@@ -3,11 +3,11 @@ package toanweb2.DoAnWeb2.controllers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import toanweb2.DoAnWeb2.entity.User;
 import toanweb2.DoAnWeb2.service.UserService;
 
+import toanweb2.DoAnWeb2.dto.request.ChangePasswordRequest;
 import java.util.List;
 import java.util.Map;
 
@@ -65,29 +65,11 @@ public class UserController {
     }
 
     @PutMapping("/{id}/change-password")
-    public ResponseEntity<?> changePassword(
+    public ResponseEntity<Map<String, String>> changePassword(
             @PathVariable Long id,
-            @RequestBody ChangePasswordRequest request
-    ) {
-        String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
-        User userToChange = userService.findById(id).orElse(null);
-        if (userToChange == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "Không tìm thấy tài khoản"));
-        }
-
-        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        if (!isAdmin && !userToChange.getUsername().equals(currentUsername)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Bạn không có quyền đổi mật khẩu của tài khoản này"));
-        }
-
-        try {
-            userService.changePassword(id, request.oldPassword(), request.newPassword());
-            return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
+            @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(id, request.oldPassword(), request.newPassword());
+        return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công"));
     }
 
     private UserResponse toUserResponse(User user) {
@@ -98,11 +80,12 @@ public class UserController {
                 user.getEmail(),
                 user.getPhone(),
                 user.getStatus(),
-                user.getRole() != null ? user.getRole().getRoleName() : null
-        );
+                user.getRole() != null ? user.getRole().getRoleName() : null,
+                user.getImageUrl());
     }
 
-    public record ChangePasswordRequest(String oldPassword, String newPassword) {}
+    public record ChangePasswordRequest(String oldPassword, String newPassword) {
+    }
 
     public record UserResponse(
             Long id,
@@ -111,6 +94,7 @@ public class UserController {
             String email,
             String phone,
             String status,
-            String roleName
-    ) {}
+            String roleName,
+            String imageUrl) {
+    }
 }

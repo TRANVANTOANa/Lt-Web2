@@ -50,16 +50,14 @@ public class InvoiceController {
 
     @GetMapping("/revenue/day")
     public ResponseEntity<Map<String, BigDecimal>> revenueByDay(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
-    ) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(Map.of("revenue", invoiceService.calculateRevenueByDay(date)));
     }
 
     @GetMapping("/revenue/month")
     public ResponseEntity<Map<String, BigDecimal>> revenueByMonth(
             @RequestParam int year,
-            @RequestParam int month
-    ) {
+            @RequestParam int month) {
         return ResponseEntity.ok(Map.of("revenue", invoiceService.calculateRevenueByMonth(year, month)));
     }
 
@@ -68,5 +66,6 @@ public class InvoiceController {
         return ResponseEntity.ok(Map.of("revenue", invoiceService.calculateRevenueByYear(year)));
     }
 
-    public record PaymentRequest(String paymentMethod) {}
+    public record PaymentRequest(String paymentMethod) {
+    }
 }

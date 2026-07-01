@@ -37,9 +37,11 @@ public class Employee {
 
     private LocalDateTime createdAt;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "employee")
     private Set<Appointment> appointments;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "employee")
     private Set<WorkSchedule> workSchedules;
 

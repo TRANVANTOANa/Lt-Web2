@@ -25,6 +25,7 @@ public class Room {
     @Column(columnDefinition = "VARCHAR(20) DEFAULT 'TRONG'")
     private String status; // TRONG, DANG_SU_DUNG, BAO_TRI
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "room")
     private Set<Appointment> appointments;
 

@@ -41,9 +41,11 @@ public class SpaService {
 
     private LocalDateTime createdAt;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "service")
     private Set<AppointmentDetail> appointmentDetails;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "service")
     private Set<Review> reviews;
 

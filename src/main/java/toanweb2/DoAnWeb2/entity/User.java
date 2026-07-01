@@ -29,6 +29,8 @@ public class User {
 
     private String phone;
 
+    private String imageUrl;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id")
     private Role role;

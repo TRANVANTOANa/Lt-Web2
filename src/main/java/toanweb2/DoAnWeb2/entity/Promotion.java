@@ -36,6 +36,7 @@ public class Promotion {
     @Column(columnDefinition = "VARCHAR(20) DEFAULT 'ACTIVE'")
     private String status; // ACTIVE, INACTIVE, EXPIRED
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "promotion")
     private Set<Invoice> invoices;
 

@@ -32,6 +32,8 @@ public class Customer {
 
     private String address;
 
+    private String imageUrl;
+
     @Column(columnDefinition = "VARCHAR(20) DEFAULT 'THUONG'")
     private String customerType; // THUONG, VIP, THAN_THIET
 
@@ -40,12 +42,15 @@ public class Customer {
 
     private LocalDateTime createdAt;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "customer")
     private Set<Appointment> appointments;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "customer")
     private Set<Review> reviews;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "customer")
     private Set<Invoice> invoices;
 

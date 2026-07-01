@@ -52,6 +52,7 @@ public class CustomerServiceImpl implements CustomerService {
         existing.setAddress(customer.getAddress());
         existing.setCustomerType(customer.getCustomerType());
         existing.setNote(customer.getNote());
+        existing.setImageUrl(customer.getImageUrl());
         return customerRepository.save(existing);
     }
 

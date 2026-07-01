@@ -25,6 +25,7 @@ public class ServiceCategory {
     @Column(columnDefinition = "VARCHAR(20) DEFAULT 'ACTIVE'")
     private String status; // ACTIVE, INACTIVE
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @OneToMany(mappedBy = "category")
     private Set<SpaService> spaServices;
 
