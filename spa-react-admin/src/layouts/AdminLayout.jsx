@@ -10,7 +10,6 @@ import ServiceList from '../pages/services/ServiceList.jsx';
 import AppointmentList from '../pages/appointments/AppointmentList.jsx';
 import RoomList from '../pages/rooms/RoomList.jsx';
 import InvoiceList from '../pages/invoices/InvoiceList.jsx';
-import PaymentList from '../pages/payments/PaymentList.jsx';
 import PromotionList from '../pages/promotions/PromotionList.jsx';
 import ReviewList from '../pages/reviews/ReviewList.jsx';
 import Reports from '../pages/reports/Reports.jsx';
@@ -43,7 +42,6 @@ export default function AdminLayout() {
             <Route path="appointments" element={<AppointmentList config={pageConfigs.appointments} />} />
             <Route path="rooms" element={<RoomList config={pageConfigs.rooms} />} />
             <Route path="invoices" element={<InvoiceList config={pageConfigs.invoices} />} />
-            <Route path="payments" element={<PaymentList config={pageConfigs.payments} />} />
             <Route path="promotions" element={<PromotionList config={pageConfigs.promotions} />} />
             <Route path="reviews" element={<ReviewList config={pageConfigs.reviews} />} />
             <Route path="reports" element={<Reports />} />

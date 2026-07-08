@@ -132,7 +132,7 @@ export const menus = [
   ['/', 'Tổng quan', FiHome], ['/customers', 'Khách hàng', FiUsers], ['/employees', 'Nhân viên', FiUser],
   ['/users', 'Tài khoản', FiShield],
   ['/service-categories', 'Danh mục', FiGrid], ['/spa-services', 'Dịch vụ', FiStar], ['/appointments', 'Lịch hẹn', FiCalendar],
-  ['/rooms', 'Phòng', FiShoppingBag], ['/invoices', 'Hóa đơn', FiCreditCard], ['/payments', 'Thanh toán', FiSettings],
+  ['/rooms', 'Phòng', FiShoppingBag], ['/invoices', 'Hóa đơn', FiCreditCard],
   ['/promotions', 'Khuyến mãi', FiGift], ['/reviews', 'Đánh giá', FiMessageCircle], ['/reports', 'Thống kê', FiPieChart],
 ];
 

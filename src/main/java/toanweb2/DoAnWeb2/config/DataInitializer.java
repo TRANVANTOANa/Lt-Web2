@@ -11,8 +11,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.HashSet;
-import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -26,47 +24,85 @@ public class DataInitializer implements CommandLineRunner {
     private final ServiceCategoryRepository serviceCategoryRepository;
     private final SpaServiceRepository spaServiceRepository;
     private final AppointmentRepository appointmentRepository;
-    private final AppointmentDetailRepository appointmentDetailRepository;
     private final InvoiceRepository invoiceRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
-        if (userRepository.count() > 0) {
-            System.out.println("Cơ sở dữ liệu đã có dữ liệu. Bỏ qua bước seed data.");
-            return;
+        System.out.println("Đang thực hiện kiểm tra và seed data mẫu cho ứng dụng Spa...");
+
+        // 1. Tạo hoặc lấy các Vai trò (Roles)
+        Role roleAdmin = roleRepository.findByRoleName("ROLE_ADMIN")
+                .orElseGet(() -> roleRepository.save(Role.builder().roleName("ROLE_ADMIN").description("Quản trị viên hệ thống").build()));
+        Role roleNhanVien = roleRepository.findByRoleName("ROLE_NHAN_VIEN")
+                .orElseGet(() -> roleRepository.save(Role.builder().roleName("ROLE_NHAN_VIEN").description("Nhân viên Spa").build()));
+        Role roleKhachHang = roleRepository.findByRoleName("ROLE_KHACH_HANG")
+                .orElseGet(() -> roleRepository.save(Role.builder().roleName("ROLE_KHACH_HANG").description("Khách hàng").build()));
+
+        // 2. Tạo hoặc cập nhật Tài khoản Admin mặc định
+        User admin = userRepository.findByUsername("admin").orElse(null);
+        if (admin == null) {
+            admin = User.builder()
+                    .username("admin")
+                    .password(passwordEncoder.encode("admin123"))
+                    .fullName("Admin Ly")
+                    .email("admin@spamanagement.com")
+                    .phone("0987654321")
+                    .role(roleAdmin)
+                    .status("ACTIVE")
+                    .build();
+            userRepository.save(admin);
+            System.out.println("Đã tạo tài khoản admin mặc định.");
+        } else if (admin.getRole() == null) {
+            admin.setRole(roleAdmin);
+            userRepository.save(admin);
+            System.out.println("Đã cập nhật vai trò ROLE_ADMIN cho tài khoản admin.");
         }
 
-        System.out.println("Đang thực hiện seed data mẫu cho ứng dụng Spa...");
+        // Tạo hoặc cập nhật Tài khoản Nhân viên mặc định
+        User staffUser = userRepository.findByUsername("staff").orElse(null);
+        if (staffUser == null) {
+            staffUser = User.builder()
+                    .username("staff")
+                    .password(passwordEncoder.encode("staff123"))
+                    .fullName("Nhân Viên Spa")
+                    .email("staff@spamanagement.com")
+                    .phone("0912345678")
+                    .role(roleNhanVien)
+                    .status("ACTIVE")
+                    .build();
+            userRepository.save(staffUser);
+            System.out.println("Đã tạo tài khoản staff mặc định.");
+        } else if (staffUser.getRole() == null) {
+            staffUser.setRole(roleNhanVien);
+            userRepository.save(staffUser);
+            System.out.println("Đã cập nhật vai trò ROLE_NHAN_VIEN cho tài khoản staff.");
+        }
 
-        // 1. Tạo các Vai trò (Roles)
-        Role roleAdmin = roleRepository.save(Role.builder().roleName("ROLE_ADMIN").description("Quản trị viên hệ thống").build());
-        Role roleNhanVien = roleRepository.save(Role.builder().roleName("ROLE_NHAN_VIEN").description("Nhân viên Spa").build());
-        Role roleKhachHang = roleRepository.save(Role.builder().roleName("ROLE_KHACH_HANG").description("Khách hàng").build());
+        // Tạo hoặc cập nhật Tài khoản Khách hàng mẫu
+        User customerUser = userRepository.findByUsername("khachhang").orElse(null);
+        if (customerUser == null) {
+            customerUser = User.builder()
+                    .username("khachhang")
+                    .password(passwordEncoder.encode("khachhang123"))
+                    .fullName("Nguyễn Thị Lan")
+                    .email("lan.nguyen@gmail.com")
+                    .phone("0912223334")
+                    .role(roleKhachHang)
+                    .status("ACTIVE")
+                    .build();
+            userRepository.save(customerUser);
+            System.out.println("Đã tạo tài khoản khachhang mặc định.");
+        } else if (customerUser.getRole() == null) {
+            customerUser.setRole(roleKhachHang);
+            userRepository.save(customerUser);
+            System.out.println("Đã cập nhật vai trò ROLE_KHACH_HANG cho tài khoản khachhang.");
+        }
 
-        // 2. Tạo Tài khoản Admin mặc định
-        User admin = User.builder()
-                .username("admin")
-                .password(passwordEncoder.encode("admin123"))
-                .fullName("Admin Ly")
-                .email("admin@spamanagement.com")
-                .phone("0987654321")
-                .role(roleAdmin)
-                .status("ACTIVE")
-                .build();
-        userRepository.save(admin);
-
-        // Tạo Tài khoản Nhân viên mặc định
-        User staffUser = User.builder()
-                .username("staff")
-                .password(passwordEncoder.encode("staff123"))
-                .fullName("Nhân Viên Spa")
-                .email("staff@spamanagement.com")
-                .phone("0912345678")
-                .role(roleNhanVien)
-                .status("ACTIVE")
-                .build();
-        userRepository.save(staffUser);
+        if (spaServiceRepository.count() > 0) {
+            System.out.println("Đã có dịch vụ Spa trong cơ sở dữ liệu. Bỏ qua các bước seed dữ liệu phòng, dịch vụ, khách hàng, lịch hẹn.");
+            return;
+        }
 
         // 3. Tạo các Phòng (Rooms)
         Room room1 = roomRepository.save(Room.builder().roomName("Phòng VIP 1").description("Phòng trị liệu cao cấp 1").status("TRONG").build());
@@ -100,72 +136,53 @@ public class DataInitializer implements CommandLineRunner {
         SpaService svc4 = spaServiceRepository.save(SpaService.builder().category(catTayDaChet).name("Tẩy tế bào chết").description("Tẩy tế bào chết toàn thân bằng hạt cafe và muối khoáng").price(BigDecimal.valueOf(200000)).duration(40).status("ACTIVE").build());
         SpaService svc5 = spaServiceRepository.save(SpaService.builder().category(catXongHoi).name("Xông hơi đá muối").description("Xông hơi đá muối Hymalaya đào thải độc tố").price(BigDecimal.valueOf(250000)).duration(50).status("ACTIVE").build());
 
-        // 8. Tạo Lịch hẹn cho ngày hôm nay (Appointments & Details)
+        // 8. Tạo Lịch hẹn cho ngày hôm nay
+        // Service, price, duration đã được gộp trực tiếp vào Appointment
         LocalDate today = LocalDate.now();
 
-        // Lịch hẹn 1: Nguyễn Thị Lan - 10:00 AM - Sắp đến (DA_XAC_NHAN)
-        Appointment app1 = appointmentRepository.save(Appointment.builder()
-                .customer(cust1)
-                .employee(emp1)
-                .room(room1)
-                .appointmentDate(today)
-                .appointmentTime(LocalTime.of(10, 0))
-                .status("DA_XAC_NHAN")
-                .note("Khách yêu cầu phòng yên tĩnh")
+        // Lịch hẹn 1: Nguyễn Thị Lan - 10:00 - Sắp đến (DA_XAC_NHAN)
+        appointmentRepository.save(Appointment.builder()
+                .customer(cust1).employee(emp1).room(room1).service(svc1)
+                .appointmentDate(today).appointmentTime(LocalTime.of(10, 0))
+                .duration(svc1.getDuration()).price(svc1.getPrice())
+                .status("DA_XAC_NHAN").note("Khách yêu cầu phòng yên tĩnh")
                 .build());
-        appointmentDetailRepository.save(AppointmentDetail.builder().appointment(app1).service(svc1).price(svc1.getPrice()).duration(svc1.getDuration()).build());
 
-        // Lịch hẹn 2: Trần Văn Hùng - 11:30 AM - Đang thực hiện (DANG_THUC_HIEN)
-        Appointment app2 = appointmentRepository.save(Appointment.builder()
-                .customer(cust2)
-                .employee(emp2)
-                .room(room2)
-                .appointmentDate(today)
-                .appointmentTime(LocalTime.of(11, 30))
-                .status("DANG_THUC_HIEN")
-                .note("")
+        // Lịch hẹn 2: Trần Văn Hùng - 11:30 - Đang thực hiện (DANG_THUC_HIEN)
+        appointmentRepository.save(Appointment.builder()
+                .customer(cust2).employee(emp2).room(room2).service(svc2)
+                .appointmentDate(today).appointmentTime(LocalTime.of(11, 30))
+                .duration(svc2.getDuration()).price(svc2.getPrice())
+                .status("DANG_THUC_HIEN").note("")
                 .build());
-        appointmentDetailRepository.save(AppointmentDetail.builder().appointment(app2).service(svc2).price(svc2.getPrice()).duration(svc2.getDuration()).build());
 
-        // Lịch hẹn 3: Lê Thị Mai - 1:00 PM - Đã đặt / Đang chờ (DANG_CHO)
-        Appointment app3 = appointmentRepository.save(Appointment.builder()
-                .customer(cust3)
-                .employee(emp1)
-                .room(room1)
-                .appointmentDate(today)
-                .appointmentTime(LocalTime.of(13, 0))
-                .status("DANG_CHO")
-                .note("")
+        // Lịch hẹn 3: Lê Thị Mai - 13:00 - Đang chờ (DANG_CHO)
+        appointmentRepository.save(Appointment.builder()
+                .customer(cust3).employee(emp1).room(room1).service(svc3)
+                .appointmentDate(today).appointmentTime(LocalTime.of(13, 0))
+                .duration(svc3.getDuration()).price(svc3.getPrice())
+                .status("DANG_CHO").note("")
                 .build());
-        appointmentDetailRepository.save(AppointmentDetail.builder().appointment(app3).service(svc3).price(svc3.getPrice()).duration(svc3.getDuration()).build());
 
-        // Lịch hẹn 4: Phạm Hoàng Oanh - 2:30 PM - Sắp đến (DA_XAC_NHAN)
-        Appointment app4 = appointmentRepository.save(Appointment.builder()
-                .customer(cust4)
-                .employee(emp2)
-                .room(room3)
-                .appointmentDate(today)
-                .appointmentTime(LocalTime.of(14, 30))
-                .status("DA_XAC_NHAN")
-                .note("")
+        // Lịch hẹn 4: Phạm Hoàng Oanh - 14:30 - Sắp đến (DA_XAC_NHAN)
+        appointmentRepository.save(Appointment.builder()
+                .customer(cust4).employee(emp2).room(room3).service(svc4)
+                .appointmentDate(today).appointmentTime(LocalTime.of(14, 30))
+                .duration(svc4.getDuration()).price(svc4.getPrice())
+                .status("DA_XAC_NHAN").note("")
                 .build());
-        appointmentDetailRepository.save(AppointmentDetail.builder().appointment(app4).service(svc4).price(svc4.getPrice()).duration(svc4.getDuration()).build());
 
-        // 9. Tạo các lịch hẹn đã hoàn thành và hóa đơn thanh toán để tính doanh thu
-        // Hôm nay: 15.5M VND doanh thu. Hãy tạo 3 hóa đơn thanh toán có tổng bằng 15.5M
-        // Để nhanh gọn, ta tạo các hóa đơn trực tiếp cho ngày hôm nay và các tháng trước.
+        // 9. Tạo các lịch hẹn đã hoàn thành và hóa đơn để tính doanh thu
         createPaidInvoice(cust1, emp1, svc2, today, BigDecimal.valueOf(5500000));
         createPaidInvoice(cust2, emp2, svc1, today, BigDecimal.valueOf(6000000));
         createPaidInvoice(cust3, emp3, svc5, today, BigDecimal.valueOf(4000000)); // Tổng hôm nay = 15,500,000
 
-        // Tạo hóa đơn tháng này nhưng ngày khác để đạt tổng 450M VND
+        // Dữ liệu tháng này (các ngày trước)
         createPaidInvoice(cust1, emp1, svc1, today.minusDays(2), BigDecimal.valueOf(134500000));
         createPaidInvoice(cust2, emp2, svc2, today.minusDays(5), BigDecimal.valueOf(150000000));
         createPaidInvoice(cust3, emp3, svc3, today.minusDays(8), BigDecimal.valueOf(150000000)); // Tổng tháng này = 450,000,000
 
-        // Tạo hóa đơn cho các tháng trước (để vẽ biểu đồ doanh thu cả năm)
-        // Th1: 350M, Th2: 380M, Th3: 410M, Th4: 390M, Th5: 420M, Th6: 450M (nếu tháng hiện tại là Th6)
-        // Ta tạo hóa đơn cho từng tháng của năm nay
+        // Dữ liệu biểu đồ doanh thu cả năm
         int currentYear = today.getYear();
         BigDecimal[] monthlyRevenues = {
                 BigDecimal.valueOf(350000000), // Th1
@@ -173,7 +190,7 @@ public class DataInitializer implements CommandLineRunner {
                 BigDecimal.valueOf(410000000), // Th3
                 BigDecimal.valueOf(390000000), // Th4
                 BigDecimal.valueOf(420000000), // Th5
-                BigDecimal.valueOf(450000000), // Th6 (tháng hiện tại)
+                BigDecimal.valueOf(450000000), // Th6
                 BigDecimal.valueOf(480000000), // Th7
                 BigDecimal.valueOf(510000000), // Th8
                 BigDecimal.valueOf(540000000), // Th9
@@ -182,9 +199,7 @@ public class DataInitializer implements CommandLineRunner {
                 BigDecimal.valueOf(620000000)  // Th12
         };
 
-        // Seed dữ liệu doanh thu tháng cho biểu đồ
         for (int m = 1; m <= 12; m++) {
-            // Chỉ tạo cho các tháng khác tháng hiện tại để tránh đè doanh thu tháng hiện tại
             if (m != today.getMonthValue()) {
                 LocalDate dateInMonth = LocalDate.of(currentYear, m, 15);
                 createPaidInvoice(cust4, emp4, svc1, dateInMonth, monthlyRevenues[m - 1]);
@@ -194,20 +209,21 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("Hoàn thành seed data mẫu thành công!");
     }
 
+    /**
+     * Tạo lịch hẹn hoàn thành + hóa đơn đã thanh toán.
+     * Appointment nay đã có trực tiếp service, price, duration (không cần AppointmentDetail).
+     * Invoice nay đã có trực tiếp paymentMethod, paidAt (không cần Payment riêng).
+     */
     private void createPaidInvoice(Customer customer, Employee employee, SpaService service, LocalDate date, BigDecimal finalAmount) {
         Appointment app = appointmentRepository.save(Appointment.builder()
                 .customer(customer)
                 .employee(employee)
+                .service(service)
                 .appointmentDate(date)
                 .appointmentTime(LocalTime.of(9, 0))
-                .status("HOAN_THANH")
-                .build());
-
-        appointmentDetailRepository.save(AppointmentDetail.builder()
-                .appointment(app)
-                .service(service)
-                .price(service.getPrice())
                 .duration(service.getDuration())
+                .price(service.getPrice())
+                .status("HOAN_THANH")
                 .build());
 
         Invoice invoice = Invoice.builder()
@@ -217,12 +233,14 @@ public class DataInitializer implements CommandLineRunner {
                 .totalAmount(finalAmount)
                 .discountAmount(BigDecimal.ZERO)
                 .finalAmount(finalAmount)
+                .paymentMethod("TIEN_MAT")
                 .paymentStatus("DA_THANH_TOAN")
+                .paidAt(date.atTime(10, 0))
                 .build();
-        
+
         Invoice savedInvoice = invoiceRepository.save(invoice);
-        
-        // Cần chỉnh sửa ngày tạo của hóa đơn thủ công để khớp với tháng mong muốn
+
+        // Điều chỉnh createdAt để khớp với tháng mong muốn cho biểu đồ doanh thu
         savedInvoice.setCreatedAt(date.atTime(10, 0));
         invoiceRepository.save(savedInvoice);
     }

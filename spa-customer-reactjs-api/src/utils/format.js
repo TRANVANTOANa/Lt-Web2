@@ -10,18 +10,21 @@ export const dateText = (value) => {
   return date.toLocaleDateString('vi-VN');
 };
 
-export const statusText = (status) => ({
-  DANG_CHO: 'Chờ xác nhận',
-  DA_XAC_NHAN: 'Đã xác nhận',
-  DANG_THUC_HIEN: 'Đang thực hiện',
-  HOAN_THANH: 'Hoàn thành',
-  DA_HUY: 'Đã hủy',
-  KHACH_KHONG_DEN: 'Khách không đến',
-  CHUA_THANH_TOAN: 'Chưa thanh toán',
-  DA_THANH_TOAN: 'Đã thanh toán',
-  ACTIVE: 'Hoạt động',
-  INACTIVE: 'Tạm ẩn',
-})(status) || status || 'Đang cập nhật';
+export const statusText = (status) => {
+  const map = {
+    DANG_CHO: 'Chờ xác nhận',
+    DA_XAC_NHAN: 'Đã xác nhận',
+    DANG_THUC_HIEN: 'Đang thực hiện',
+    HOAN_THANH: 'Hoàn thành',
+    DA_HUY: 'Đã hủy',
+    KHACH_KHONG_DEN: 'Khách không đến',
+    CHUA_THANH_TOAN: 'Chưa thanh toán',
+    DA_THANH_TOAN: 'Đã thanh toán',
+    ACTIVE: 'Hoạt động',
+    INACTIVE: 'Tạm ẩn',
+  };
+  return map[status] || status || 'Đang cập nhật';
+};
 
 export const statusClass = (status) => {
   if (['HOAN_THANH', 'DA_THANH_TOAN', 'ACTIVE', 'DA_XAC_NHAN'].includes(status)) return 'success';

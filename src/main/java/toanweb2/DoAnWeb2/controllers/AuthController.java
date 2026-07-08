@@ -83,7 +83,25 @@ public class AuthController {
                     }
                 }
 
-                return ResponseEntity.status(HttpStatus.CREATED).body(toUserResponse(savedUser));
+                String token = "";
+                try {
+                    Authentication authentication = authenticationManager.authenticate(
+                            new UsernamePasswordAuthenticationToken(request.username(), request.password())
+                    );
+                    token = jwtTokenProvider.generateToken(authentication);
+                } catch (Exception e) {
+                    // Fallback
+                }
+
+                return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                                "message", "Đăng ký thành công",
+                                "token", token,
+                                "id", savedUser.getId(),
+                                "username", savedUser.getUsername(),
+                                "fullName", savedUser.getFullName() != null ? savedUser.getFullName() : savedUser.getUsername(),
+                                "role", savedUser.getRole() != null ? savedUser.getRole().getRoleName() : "ROLE_KHACH_HANG",
+                                "imageUrl", savedUser.getImageUrl() != null ? savedUser.getImageUrl() : ""
+                ));
         }
 
         @PostMapping("/login")

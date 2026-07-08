@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+
 @Entity
 @Table(name = "employees")
 @Getter
@@ -41,9 +42,6 @@ public class Employee {
     @OneToMany(mappedBy = "employee")
     private Set<Appointment> appointments;
 
-    @com.fasterxml.jackson.annotation.JsonIgnore
-    @OneToMany(mappedBy = "employee")
-    private Set<WorkSchedule> workSchedules;
 
     @PrePersist
     protected void onCreate() {

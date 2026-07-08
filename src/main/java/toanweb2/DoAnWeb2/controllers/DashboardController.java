@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import toanweb2.DoAnWeb2.entity.Appointment;
-import toanweb2.DoAnWeb2.entity.AppointmentDetail;
 import toanweb2.DoAnWeb2.repository.CustomerRepository;
 import toanweb2.DoAnWeb2.repository.EmployeeRepository;
 import toanweb2.DoAnWeb2.repository.SpaServiceRepository;
@@ -54,8 +53,7 @@ public class DashboardController {
         BigDecimal revenueMonth = invoiceService.calculateRevenueByMonth(today.getYear(), today.getMonthValue());
         if (revenueMonth == null) revenueMonth = BigDecimal.ZERO;
 
-        // Nếu DB rỗng hoặc mới tạo chưa có nhiều dữ liệu, ta dùng dữ liệu fallback cực đẹp như screenshot
-        // Nhưng nếu đã chạy DataInitializer thì dữ liệu này sẽ khớp hoặc vượt qua
+        // Fallback nếu DB chưa có dữ liệu
         long displayCustomers = totalCustomers == 0 ? 1250 : totalCustomers;
         long displayEmployees = totalEmployees == 0 ? 48 : totalEmployees;
         long displayServices = totalServices == 0 ? 65 : totalServices;
@@ -83,7 +81,7 @@ public class DashboardController {
             monthlyRevenueList.add(rev);
         }
 
-        // Fallback dữ liệu biểu đồ từ screenshot nếu DB không có doanh thu
+        // Fallback dữ liệu biểu đồ nếu DB không có doanh thu
         if (!hasAnyRevenue) {
             monthlyRevenueList = Arrays.asList(
                     BigDecimal.valueOf(350000000), // Th1
@@ -105,8 +103,8 @@ public class DashboardController {
         // 5. Lịch hẹn gần nhất (Recent Appointments)
         List<Map<String, Object>> recentAppList = new ArrayList<>();
         List<Appointment> allAppointments = appointmentRepository.findAll();
-        
-        // Sắp xếp lịch hẹn theo ngày và giờ giảm dần (gần đây nhất lên trước)
+
+        // Lịch hẹn hôm nay, sắp xếp theo giờ
         List<Appointment> sortedApps = allAppointments.stream()
                 .filter(a -> a.getAppointmentDate().isEqual(today))
                 .sorted(Comparator.comparing(Appointment::getAppointmentTime))
@@ -115,18 +113,16 @@ public class DashboardController {
         for (Appointment app : sortedApps) {
             Map<String, Object> map = new HashMap<>();
             map.put("customerName", app.getCustomer() != null ? app.getCustomer().getFullName() : "Khách vãng lai");
-            
-            String services = "Chưa chọn dịch vụ";
-            if (app.getAppointmentDetails() != null && !app.getAppointmentDetails().isEmpty()) {
-                services = app.getAppointmentDetails().stream()
-                        .map(detail -> detail.getService() != null ? detail.getService().getName() : "")
-                        .filter(name -> !name.isEmpty())
-                        .collect(Collectors.joining(", "));
+
+            // Lấy tên dịch vụ trực tiếp từ appointment.service (đã gộp từ AppointmentDetail)
+            String serviceName = "Chưa chọn dịch vụ";
+            if (app.getService() != null) {
+                serviceName = app.getService().getName();
             }
-            map.put("serviceName", services);
+            map.put("serviceName", serviceName);
             map.put("time", app.getAppointmentTime().toString());
-            
-            // Map status tiếng Anh -> Việt cho đồng bộ giao diện screenshot
+
+            // Map status sang tiếng Việt
             String vietnameseStatus = "Đang chờ";
             if ("DA_XAC_NHAN".equalsIgnoreCase(app.getStatus())) {
                 vietnameseStatus = "Sắp đến";
@@ -146,19 +142,16 @@ public class DashboardController {
         // Fallback lịch hẹn nếu không có lịch hẹn nào hôm nay
         if (recentAppList.isEmpty()) {
             recentAppList = Arrays.asList(
-                    createRecentAppMap("Nguyễn Thị Lan", "Massage thư giãn", "10:00 AM", "Sắp đến"),
-                    createRecentAppMap("Trần Văn Hùng", "Chăm sóc da mặt", "11:30 AM", "Đang thực hiện"),
-                    createRecentAppMap("Lê Thị Mai", "Gội đầu thảo dược", "01:00 PM", "Đã đặt"),
-                    createRecentAppMap("Phạm Hoàng Oanh", "Tẩy tế bào chết", "02:30 PM", "Sắp đến")
+                    createRecentAppMap("Nguyễn Thị Lan", "Massage thư giãn", "10:00", "Sắp đến"),
+                    createRecentAppMap("Trần Văn Hùng", "Chăm sóc da mặt", "11:30", "Đang thực hiện"),
+                    createRecentAppMap("Lê Thị Mai", "Gội đầu thảo dược", "13:00", "Đã đặt"),
+                    createRecentAppMap("Phạm Hoàng Oanh", "Tẩy tế bào chết", "14:30", "Sắp đến")
             );
         }
         stats.put("recentAppointments", recentAppList);
 
-        // 6. Dịch vụ phổ biến nhất (Popular Services)
-        List<Map<String, Object>> popularServices = new ArrayList<>();
-        // Trong dự án thực tế, ta có thể query group by và count từ AppointmentDetail.
-        // Ở đây ta trả về danh sách phổ biến khớp hoàn hảo với screenshot
-        popularServices = Arrays.asList(
+        // 6. Dịch vụ phổ biến nhất (Popular Services) - hardcode cho đồ án
+        List<Map<String, Object>> popularServices = Arrays.asList(
                 createPopularServiceMap("Massage thư giãn", 150, 95),
                 createPopularServiceMap("Chăm sóc da mặt", 120, 80),
                 createPopularServiceMap("Gội đầu thảo dược", 100, 70),

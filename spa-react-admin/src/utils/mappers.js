@@ -67,6 +67,7 @@ export const mapApiToUi = (endpoint, item) => {
     case '/users':
       return {
         ...item,
+        roleName: item.role?.roleName || item.roleName || '',
         password: '',
         status: item.status || 'ACTIVE'
       };

@@ -19,7 +19,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     public List<Appointment> findAll() {
-        return appointmentRepository.findAll();
+        return appointmentRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
     }
 
     @Override
@@ -42,8 +42,31 @@ public class AppointmentServiceImpl implements AppointmentService {
         return appointmentRepository.findByAppointmentDate(date);
     }
 
+    private void mapDetailsToAppointment(Appointment appointment) {
+        if (appointment.getAppointmentDetails() != null && !appointment.getAppointmentDetails().isEmpty()) {
+            java.util.Map<String, Object> detail = appointment.getAppointmentDetails().get(0);
+            if (appointment.getService() == null && detail.get("service") instanceof java.util.Map) {
+                java.util.Map<?, ?> svcMap = (java.util.Map<?, ?>) detail.get("service");
+                Object svcIdObj = svcMap.get("id");
+                if (svcIdObj != null) {
+                    Long svcId = Long.valueOf(svcIdObj.toString());
+                    toanweb2.DoAnWeb2.entity.SpaService svc = new toanweb2.DoAnWeb2.entity.SpaService();
+                    svc.setId(svcId);
+                    appointment.setService(svc);
+                }
+            }
+            if (appointment.getPrice() == null && detail.get("price") != null) {
+                appointment.setPrice(new java.math.BigDecimal(detail.get("price").toString()));
+            }
+            if (appointment.getDuration() == null && detail.get("duration") != null) {
+                appointment.setDuration(Integer.valueOf(detail.get("duration").toString()));
+            }
+        }
+    }
+
     @Override
     public Appointment save(Appointment appointment) {
+        mapDetailsToAppointment(appointment);
         return appointmentRepository.save(appointment);
     }
 
@@ -51,11 +74,15 @@ public class AppointmentServiceImpl implements AppointmentService {
     public Appointment update(Long id, Appointment appointment) {
         Appointment existing = appointmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch hẹn với ID: " + id));
+        mapDetailsToAppointment(appointment);
         existing.setCustomer(appointment.getCustomer());
         existing.setEmployee(appointment.getEmployee());
         existing.setRoom(appointment.getRoom());
+        existing.setService(appointment.getService());
         existing.setAppointmentDate(appointment.getAppointmentDate());
         existing.setAppointmentTime(appointment.getAppointmentTime());
+        existing.setDuration(appointment.getDuration());
+        existing.setPrice(appointment.getPrice());
         existing.setNote(appointment.getNote());
         existing.setStatus(appointment.getStatus());
         return appointmentRepository.save(existing);
@@ -81,14 +108,9 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         for (Appointment a : appointments) {
             LocalTime existingStart = a.getAppointmentTime();
-            // Tính tổng thời gian dịch vụ của lịch hẹn hiện tại
-            int totalDuration = 60; // Mặc định 60 phút nếu không có chi tiết
-            if (a.getAppointmentDetails() != null && !a.getAppointmentDetails().isEmpty()) {
-                totalDuration = a.getAppointmentDetails().stream()
-                        .mapToInt(d -> d.getDuration() != null ? d.getDuration() : 60)
-                        .sum();
-            }
-            LocalTime existingEnd = existingStart.plusMinutes(totalDuration);
+            // Dùng duration trực tiếp từ appointment, mặc định 60 phút nếu null
+            int existingDuration = (a.getDuration() != null) ? a.getDuration() : 60;
+            LocalTime existingEnd = existingStart.plusMinutes(existingDuration);
 
             // Kiểm tra trùng thời gian
             if (time.isBefore(existingEnd) && endTime.isAfter(existingStart)) {
@@ -105,13 +127,8 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         for (Appointment a : appointments) {
             LocalTime existingStart = a.getAppointmentTime();
-            int totalDuration = 60;
-            if (a.getAppointmentDetails() != null && !a.getAppointmentDetails().isEmpty()) {
-                totalDuration = a.getAppointmentDetails().stream()
-                        .mapToInt(d -> d.getDuration() != null ? d.getDuration() : 60)
-                        .sum();
-            }
-            LocalTime existingEnd = existingStart.plusMinutes(totalDuration);
+            int existingDuration = (a.getDuration() != null) ? a.getDuration() : 60;
+            LocalTime existingEnd = existingStart.plusMinutes(existingDuration);
 
             if (time.isBefore(existingEnd) && endTime.isAfter(existingStart)) {
                 return true; // Có trùng phòng

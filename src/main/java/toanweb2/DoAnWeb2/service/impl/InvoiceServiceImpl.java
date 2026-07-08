@@ -3,9 +3,7 @@ package toanweb2.DoAnWeb2.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import toanweb2.DoAnWeb2.entity.Invoice;
-import toanweb2.DoAnWeb2.entity.Payment;
 import toanweb2.DoAnWeb2.repository.InvoiceRepository;
-import toanweb2.DoAnWeb2.repository.PaymentRepository;
 import toanweb2.DoAnWeb2.service.InvoiceService;
 
 import java.math.BigDecimal;
@@ -20,7 +18,6 @@ import java.util.Optional;
 public class InvoiceServiceImpl implements InvoiceService {
 
     private final InvoiceRepository invoiceRepository;
-    private final PaymentRepository paymentRepository;
 
     @Override
     public List<Invoice> findAll() {
@@ -47,16 +44,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy hóa đơn với ID: " + invoiceId));
 
-        // Tạo payment record
-        Payment payment = Payment.builder()
-                .invoice(invoice)
-                .paymentMethod(paymentMethod)
-                .amount(invoice.getFinalAmount())
-                .build();
-        paymentRepository.save(payment);
-
-        // Cập nhật trạng thái hóa đơn
+        // Cập nhật thông tin thanh toán trực tiếp trên Invoice (đã gộp Payment vào)
+        invoice.setPaymentMethod(paymentMethod);
         invoice.setPaymentStatus("DA_THANH_TOAN");
+        invoice.setPaidAt(LocalDateTime.now());
         return invoiceRepository.save(invoice);
     }
 

@@ -43,8 +43,8 @@ public class SecurityConfig {
                 // Public - Giao diện và tài nguyên tĩnh
                 .requestMatchers("/", "/index.html", "/css/**", "/js/**", "/images/**", "/favicon.ico", "/assets/**", "/static/**", "/uploads/**").permitAll()
 
-                // Public - Đăng nhập, đăng ký
-                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                // Public - Đăng nhập, đăng ký, VNPay callback
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/vnpay/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                 // Public - Xem dịch vụ, danh mục, đánh giá, khuyến mãi (GET only)
@@ -87,16 +87,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/invoices/customer/*").hasAnyRole("ADMIN", "NHAN_VIEN", "KHACH_HANG", "CUSTOMER")
                 .requestMatchers(HttpMethod.GET, "/api/invoices/*").hasAnyRole("ADMIN", "NHAN_VIEN", "KHACH_HANG", "CUSTOMER")
                 .requestMatchers("/api/invoices/**").hasAnyRole("ADMIN", "NHAN_VIEN")
-                
-                // Payments & Dashboard Stats
-                .requestMatchers("/api/payments/**").hasAnyRole("ADMIN", "NHAN_VIEN")
-                .requestMatchers("/api/dashboard/**").hasAnyRole("ADMIN", "NHAN_VIEN")
 
-                // 6. Products
-                .requestMatchers(HttpMethod.POST, "/api/products").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
-                .requestMatchers("/api/products/**").hasAnyRole("ADMIN", "NHAN_VIEN")
+                // 6. Dashboard Stats
+                .requestMatchers("/api/dashboard/**").hasAnyRole("ADMIN", "NHAN_VIEN")
 
                 // 7. Spa Services & Service Categories
                 .requestMatchers(HttpMethod.POST, "/api/spa-services").hasRole("ADMIN")
@@ -113,7 +106,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/promotions/**").hasAnyRole("ADMIN", "NHAN_VIEN")
 
                 // 9. Reviews
-                .requestMatchers(HttpMethod.POST, "/api/reviews").hasRole("KHACH_HANG")
+                .requestMatchers(HttpMethod.POST, "/api/reviews").hasAnyRole("KHACH_HANG", "CUSTOMER")
                 .requestMatchers(HttpMethod.DELETE, "/api/reviews/**").hasRole("ADMIN")
                 .requestMatchers("/api/reviews/**").hasAnyRole("ADMIN", "NHAN_VIEN")
 
@@ -123,11 +116,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/rooms/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/rooms/status/*").hasAnyRole("ADMIN", "NHAN_VIEN", "KHACH_HANG", "CUSTOMER")
                 .requestMatchers("/api/rooms/**").hasAnyRole("ADMIN", "NHAN_VIEN")
-
-                // 11. WorkSchedules
-                .requestMatchers(HttpMethod.GET, "/api/work-schedules/employee/**").hasAnyRole("ADMIN", "NHAN_VIEN")
-                .requestMatchers(HttpMethod.GET, "/api/work-schedules/date/**").hasAnyRole("ADMIN", "NHAN_VIEN")
-                .requestMatchers("/api/work-schedules/**").hasRole("ADMIN")
 
                 // Tất cả endpoint khác cần đăng nhập
                 .anyRequest().authenticated()
@@ -164,7 +152,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder authenticationManagerBuilder = 
+        org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder authenticationManagerBuilder =
                 http.getSharedObject(org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder.class);
         authenticationManagerBuilder.authenticationProvider(authenticationProvider());
         return authenticationManagerBuilder.build();

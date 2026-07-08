@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { CalendarDays, LogOut, Menu, Search, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -7,6 +7,7 @@ export default function MainLayout() {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -22,8 +23,18 @@ export default function MainLayout() {
           <NavLink to="/">Trang chủ</NavLink>
           <NavLink to="/services">Dịch vụ</NavLink>
           <NavLink to="/booking">Đặt lịch</NavLink>
-          <NavLink to="/appointments">Lịch sử</NavLink>
-          <NavLink to="/invoices">Hóa đơn</NavLink>
+          <NavLink 
+            to="/appointments" 
+            className={location.pathname.startsWith('/appointments') ? 'active' : ''}
+          >
+            Lịch sử
+          </NavLink>
+          <NavLink 
+            to="/invoices" 
+            className={location.pathname.startsWith('/invoices') ? 'active' : ''}
+          >
+            Hóa đơn
+          </NavLink>
           <NavLink to="/contact">Liên hệ</NavLink>
         </nav>
         <div className="header-actions">
@@ -51,16 +62,18 @@ export default function MainLayout() {
       <main>
         <Outlet />
       </main>
-      <footer className="footer">
-        <div>
-          <h3>Spa Beauty</h3>
-          <p>Không gian thư giãn, chăm sóc sắc đẹp và sức khỏe chuyên nghiệp.</p>
+      <footer className="footer-redesign">
+        <div className="footer-content-row">
+          <h3 className="footer-brand">Spa Beauty</h3>
+          <ul className="footer-info-list">
+            <li className="footer-info-item">Địa chỉ: 123 Wellness Way</li>
+            <li className="footer-info-item">SĐT: 0123-456-789</li>
+            <li className="footer-info-item">Email: info@spabeauty.com</li>
+            <li className="footer-info-item">Giờ làm việc: 08:00 - 20:00</li>
+          </ul>
         </div>
-        <div>
-          <p><CalendarDays size={16} /> 08:00 - 21:00 mỗi ngày</p>
-          <p>Hotline: 0909 000 999</p>
-          <p>Email: spabeauty@example.com</p>
-        </div>
+        <hr className="footer-divider" />
+        <p className="footer-copyright">© 2024 Spa Beauty. All rights reserved.</p>
       </footer>
     </div>
   );

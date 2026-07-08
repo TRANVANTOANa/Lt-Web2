@@ -24,6 +24,7 @@ export function AuthProvider({ children }) {
     const result = await authApi.register({ ...payload, status: 'ACTIVE' });
     const nextUser = result?.user || result;
     localStorage.setItem('spa_user', JSON.stringify(nextUser));
+    if (result?.token) localStorage.setItem('spa_token', result.token);
     setUser(nextUser);
     return nextUser;
   };

@@ -5,7 +5,6 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Set;
 
 @Entity
 @Table(name = "invoices")
@@ -44,16 +43,15 @@ public class Invoice {
     @Column(nullable = false)
     private BigDecimal finalAmount; // Tổng tiền sau giảm giá
 
+    @Column(columnDefinition = "VARCHAR(30) DEFAULT 'TIEN_MAT'")
+    private String paymentMethod; // TIEN_MAT, CHUYEN_KHOAN, THE
+
     @Column(columnDefinition = "VARCHAR(20) DEFAULT 'CHUA_THANH_TOAN'")
     private String paymentStatus; // CHUA_THANH_TOAN, DA_THANH_TOAN
 
+    private LocalDateTime paidAt; // Thời điểm thanh toán
+
     private LocalDateTime createdAt;
-
-    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL)
-    private Set<InvoiceDetail> invoiceDetails;
-
-    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL)
-    private Set<Payment> payments;
 
     @PrePersist
     protected void onCreate() {
