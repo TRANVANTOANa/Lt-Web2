@@ -45,6 +45,18 @@ public class SpaServiceController {
         return ResponseEntity.ok(spaServiceService.searchByName(name));
     }
 
+    @GetMapping("/latest")
+    public ResponseEntity<List<SpaService>> getLatestServices(
+            @RequestParam(defaultValue = "6") int limit) {
+        return ResponseEntity.ok(spaServiceService.findLatest(limit));
+    }
+
+    @GetMapping("/hot")
+    public ResponseEntity<List<SpaService>> getHotServices(
+            @RequestParam(defaultValue = "6") int limit) {
+        return ResponseEntity.ok(spaServiceService.findHot(limit));
+    }
+
     @PostMapping
     public ResponseEntity<SpaService> createService(@RequestBody SpaService spaService) {
         return ResponseEntity.status(HttpStatus.CREATED).body(spaServiceService.save(spaService));

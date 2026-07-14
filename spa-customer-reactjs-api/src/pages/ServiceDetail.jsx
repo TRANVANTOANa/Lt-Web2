@@ -1,12 +1,28 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Clock, Star } from 'lucide-react';
+import { Clock, Star, ThumbsUp, Camera, User } from 'lucide-react';
 import { serviceApi } from '../api/serviceApi';
 import { reviewApi } from '../api/reviewApi';
 import ErrorBox from '../components/ErrorBox';
 import Loading from '../components/Loading';
 import { mockServices } from '../data/mockData';
 import { money, getServiceImage, dateText } from '../utils/format';
+
+const imageHost = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:8080';
+
+const StarBar = ({ count, total, star }) => {
+  const pct = total === 0 ? 0 : Math.round((count / total) * 100);
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+      <span style={{ fontSize: '13px', color: '#888', width: '18px', textAlign: 'right' }}>{star}</span>
+      <Star size={12} fill="#ffc107" color="#ffc107" />
+      <div style={{ flex: 1, height: '8px', background: '#f0f0f0', borderRadius: '4px', overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, #ffc107, #ff9800)', borderRadius: '4px', transition: 'width 0.6s ease' }} />
+      </div>
+      <span style={{ fontSize: '12px', color: '#aaa', width: '28px' }}>{count}</span>
+    </div>
+  );
+};
 
 export default function ServiceDetail() {
   const { id } = useParams();
@@ -38,6 +54,16 @@ export default function ServiceDetail() {
 
   const image = getServiceImage(service);
 
+  // Tính toán tổng hợp điểm đánh giá
+  const totalReviews = reviews.length;
+  const avgRating = totalReviews > 0
+    ? (reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / totalReviews).toFixed(1)
+    : null;
+  const starCounts = [5, 4, 3, 2, 1].map(star => ({
+    star,
+    count: reviews.filter(r => (r.rating || 0) === star).length,
+  }));
+
   return (
     <div className="page detail-page">
       <ErrorBox message={error} />
@@ -46,7 +72,10 @@ export default function ServiceDetail() {
         <div className="detail-content">
           <span className="eyebrow">{service.category?.name || 'Dịch vụ Spa'}</span>
           <h1>{service.name}</h1>
-          <div className="meta-row"><span><Star size={18} fill="currentColor" /> {service.rating || '4.9'}</span><span><Clock size={18} /> {service.duration || 60} phút</span></div>
+          <div className="meta-row">
+            <span><Star size={18} fill="currentColor" /> {avgRating || service.rating || '4.9'}</span>
+            <span><Clock size={18} /> {service.duration || 60} phút</span>
+          </div>
           <h2>{money(service.price)}</h2>
           <p>{service.description || 'Dịch vụ chăm sóc sắc đẹp chuyên nghiệp với quy trình tận tâm.'}</p>
           <ul className="check-list">
@@ -58,15 +87,195 @@ export default function ServiceDetail() {
         </div>
       </div>
 
-      <section className="reviews">
-        <h2>Đánh giá khách hàng</h2>
-        {reviews.length === 0 ? <p className="muted">Chưa có đánh giá cho dịch vụ này.</p> : reviews.map((review) => (
-          <div className="review-item" key={review.id}>
-            <strong>{review.customer?.fullName || 'Khách hàng'}</strong>
-            <span>{'★'.repeat(review.rating || 5)} · {dateText(review.createdAt)}</span>
-            <p>{review.comment}</p>
+      {/* ===== REVIEWS SECTION ===== */}
+      <section className="reviews" style={{ marginTop: '40px' }}>
+        {/* Header tổng quan */}
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+          marginBottom: '28px', gap: '24px', flexWrap: 'wrap'
+        }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 700, color: '#2d2d2d' }}>Đánh giá khách hàng</h2>
+            <p style={{ margin: '4px 0 0', color: '#888', fontSize: '14px' }}>
+              {totalReviews > 0 ? `${totalReviews} đánh giá từ khách hàng thực tế` : 'Chưa có đánh giá nào'}
+            </p>
           </div>
-        ))}
+
+          {/* Điểm tổng quan dạng card */}
+          {totalReviews > 0 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '24px',
+              background: 'linear-gradient(135deg, #fff9f0, #fff3e0)',
+              padding: '20px 28px', borderRadius: '16px',
+              border: '1px solid #ffe0b2', boxShadow: '0 2px 12px rgba(255,152,0,0.08)',
+              flexWrap: 'wrap'
+            }}>
+              {/* Big score */}
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '52px', fontWeight: 800, color: '#ff9800', lineHeight: 1 }}>{avgRating}</div>
+                <div style={{ color: '#ffc107', fontSize: '20px', margin: '6px 0 2px', letterSpacing: '3px' }}>
+                  {'★'.repeat(Math.round(avgRating))}
+                </div>
+                <div style={{ fontSize: '12px', color: '#aaa' }}>/ 5 điểm</div>
+              </div>
+
+              {/* Bar chart by star */}
+              <div style={{ minWidth: '180px' }}>
+                {starCounts.map(({ star, count }) => (
+                  <StarBar key={star} star={star} count={count} total={totalReviews} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Danh sách đánh giá */}
+        {totalReviews === 0 ? (
+          <div style={{
+            textAlign: 'center', padding: '48px 24px',
+            background: '#fafafa', borderRadius: '16px', border: '2px dashed #f0e0d0'
+          }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>💬</div>
+            <p style={{ color: '#aaa', margin: 0, fontSize: '15px' }}>Hãy là người đầu tiên đánh giá dịch vụ này!</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {reviews.map((review) => {
+              const fullImgUrl = review.imageUrl
+                ? (review.imageUrl.startsWith('http') ? review.imageUrl : `${imageHost}${review.imageUrl}`)
+                : null;
+              const initials = (review.customer?.fullName || 'K')[0].toUpperCase();
+              const avatarColors = ['#e74c3c','#e67e22','#2ecc71','#3498db','#9b59b6','#1abc9c'];
+              const avatarColor = avatarColors[review.id % avatarColors.length] || '#e67e22';
+
+              return (
+                <div key={review.id} style={{
+                  background: '#fff',
+                  borderRadius: '16px',
+                  padding: '20px 24px',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                  border: '1px solid #f5f0eb',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                }}>
+                  {/* Header: avatar + tên + sao + ngày */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '14px' }}>
+                    {/* Avatar circle */}
+                    <div style={{
+                      width: '44px', height: '44px', borderRadius: '50%',
+                      background: avatarColor, display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', color: '#fff', fontWeight: 700,
+                      fontSize: '18px', flexShrink: 0
+                    }}>
+                      {initials}
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+                        <strong style={{ fontSize: '15px', color: '#2d2d2d' }}>
+                          {review.customer?.fullName || 'Khách hàng'}
+                        </strong>
+                        <span style={{ fontSize: '12px', color: '#bbb' }}>{dateText(review.createdAt)}</span>
+                      </div>
+
+                      {/* Dịch vụ badge */}
+                      {review.service?.name && (
+                        <span style={{
+                          display: 'inline-block', fontSize: '11px', padding: '2px 10px',
+                          background: '#fdf0e8', color: '#e67e22', borderRadius: '20px',
+                          border: '1px solid #fde0c0', marginTop: '4px', fontWeight: 500
+                        }}>
+                          {review.service.name}
+                        </span>
+                      )}
+
+                      {/* Stars dịch vụ */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} size={16}
+                            fill={s <= (review.rating || 0) ? '#ffc107' : 'none'}
+                            color={s <= (review.rating || 0) ? '#ffc107' : '#ddd'}
+                          />
+                        ))}
+                        <span style={{ fontSize: '13px', color: '#888', marginLeft: '4px' }}>({review.rating}/5)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Comment dịch vụ */}
+                  {review.comment && (
+                    <p style={{
+                      margin: '0 0 14px',
+                      color: '#555', lineHeight: 1.65, fontSize: '14px',
+                      paddingLeft: '58px'
+                    }}>
+                      {review.comment}
+                    </p>
+                  )}
+
+                  {/* Nhận xét KTV */}
+                  {(review.employeeRating || review.employeeComment) && (
+                    <div style={{
+                      marginLeft: '58px', padding: '12px 16px',
+                      background: 'linear-gradient(135deg, #fff9f0, #fff3e0)',
+                      borderRadius: '10px', borderLeft: '3px solid #ff9f43',
+                      fontSize: '13px', marginBottom: '14px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                        <User size={14} color="#e67e22" />
+                        <span style={{ fontWeight: 600, color: '#e67e22', fontSize: '12px' }}>
+                          KTV: {review.employee?.fullName || 'Nhân viên Spa'}
+                        </span>
+                        <div style={{ display: 'flex', gap: '2px' }}>
+                          {[1,2,3,4,5].map(s => (
+                            <Star key={s} size={12}
+                              fill={s <= (review.employeeRating || 0) ? '#ffc107' : 'none'}
+                              color={s <= (review.employeeRating || 0) ? '#ffc107' : '#ddd'}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {review.employeeComment && (
+                        <p style={{ margin: 0, color: '#777', fontStyle: 'italic' }}>"{review.employeeComment}"</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Hình ảnh thực tế */}
+                  {fullImgUrl && (
+                    <div style={{ marginLeft: '58px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <div style={{ position: 'relative' }}>
+                        <img
+                          src={fullImgUrl}
+                          alt="Ảnh thực tế"
+                          style={{
+                            width: '120px', height: '120px', objectFit: 'cover',
+                            borderRadius: '10px', border: '2px solid #f0e4d8',
+                            cursor: 'pointer', transition: 'transform 0.2s',
+                          }}
+                          onMouseOver={e => e.target.style.transform = 'scale(1.04)'}
+                          onMouseOut={e => e.target.style.transform = 'scale(1)'}
+                        />
+                        <div style={{
+                          position: 'absolute', bottom: '6px', right: '6px',
+                          background: 'rgba(0,0,0,0.45)', borderRadius: '50%',
+                          padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          <Camera size={12} color="#fff" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Helpful indicator */}
+                  <div style={{ marginLeft: '58px', marginTop: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <ThumbsUp size={13} color="#ccc" />
+                    <span style={{ fontSize: '12px', color: '#ccc' }}>Đánh giá hữu ích</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );

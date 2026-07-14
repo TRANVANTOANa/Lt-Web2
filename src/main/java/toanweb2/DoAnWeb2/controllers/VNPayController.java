@@ -34,9 +34,9 @@ public class VNPayController {
         boolean success = vnPayService.handleCallback(queryParams);
         
         if (success) {
-            return new RedirectView("http://localhost:5173/appointments/" + txnRef + "?payment=success");
+            return new RedirectView("http://localhost:5174/appointments/" + txnRef + "?payment=success");
         } else {
-            return new RedirectView("http://localhost:5173/appointments/" + txnRef + "?payment=fail");
+            return new RedirectView("http://localhost:5174/appointments/" + txnRef + "?payment=fail");
         }
     }
 }

@@ -52,4 +52,23 @@ public class SpaService {
         createdAt = LocalDateTime.now();
         if (status == null) status = "ACTIVE";
     }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("rating")
+    public Double getRating() {
+        if (reviews == null || reviews.isEmpty()) {
+            return 4.9;
+        }
+        double sum = 0;
+        int count = 0;
+        for (Review r : reviews) {
+            if (r.getRating() != null) {
+                sum += r.getRating();
+                count++;
+            }
+        }
+        if (count == 0) {
+            return 4.9;
+        }
+        return Math.round((sum / count) * 10.0) / 10.0;
+    }
 }

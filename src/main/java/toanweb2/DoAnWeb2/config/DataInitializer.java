@@ -25,6 +25,7 @@ public class DataInitializer implements CommandLineRunner {
     private final SpaServiceRepository spaServiceRepository;
     private final AppointmentRepository appointmentRepository;
     private final InvoiceRepository invoiceRepository;
+    private final BannerRepository bannerRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -204,6 +205,37 @@ public class DataInitializer implements CommandLineRunner {
                 LocalDate dateInMonth = LocalDate.of(currentYear, m, 15);
                 createPaidInvoice(cust4, emp4, svc1, dateInMonth, monthlyRevenues[m - 1]);
             }
+        }
+
+        // 10. Seed Banners
+        if (bannerRepository.count() == 0) {
+            bannerRepository.save(Banner.builder()
+                    .title("Thư giãn cơ thể, làm đẹp làn da, phục hồi năng lượng mỗi ngày")
+                    .subtitle("Spa chăm sóc sắc đẹp cao cấp")
+                    .imageUrl("https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1200")
+                    .linkUrl("/booking")
+                    .orderNo(1)
+                    .status("ACTIVE")
+                    .build());
+
+            bannerRepository.save(Banner.builder()
+                    .title("Ưu đãi 20% cho liệu trình Chăm sóc da lần đầu")
+                    .subtitle("Khơi dậy vẻ đẹp tự nhiên của bạn")
+                    .imageUrl("https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?q=80&w=1200")
+                    .linkUrl("/services")
+                    .orderNo(2)
+                    .status("ACTIVE")
+                    .build());
+
+            bannerRepository.save(Banner.builder()
+                    .title("Gội đầu dưỡng sinh & Bấm huyệt vai gáy")
+                    .subtitle("Giảm stress, mệt mỏi, tái tạo năng lượng tức thì")
+                    .imageUrl("https://images.unsplash.com/photo-1519699047748-de8e457a634e?q=80&w=1200")
+                    .linkUrl("/services")
+                    .orderNo(3)
+                    .status("ACTIVE")
+                    .build());
+            System.out.println("Đã seed dữ liệu banners mặc định.");
         }
 
         System.out.println("Hoàn thành seed data mẫu thành công!");

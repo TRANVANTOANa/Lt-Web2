@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import { appointmentApi } from '../api/appointmentApi';
@@ -55,6 +55,11 @@ export default function Booking() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Promo code states
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState(null);
+  const [promoError, setPromoError] = useState('');
   
   // State lịch (Calendar)
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -75,12 +80,20 @@ export default function Booking() {
     const load = async () => {
       setLoading(true);
       try {
-        const [serviceData, employeeData, roomData] = await Promise.all([
+        const [serviceData, employeeData, roomData, promoData] = await Promise.all([
           serviceApi.getAll(),
           employeeApi.getActive(),
           roomApi.getAvailable(),
+          axiosClient.get('/promotions/active').catch(() => []),
         ]);
-        setServices(serviceData?.length ? serviceData : mockServices);
+        const promos = Array.isArray(promoData) ? promoData : [];
+        const enrichedServices = (serviceData?.length ? serviceData : mockServices).map(svc => ({
+          ...svc,
+          promotions: promos.filter(p =>
+            (p.applicableServices || []).some(s => s.id === svc.id)
+          )
+        }));
+        setServices(enrichedServices);
         setEmployees(employeeData?.length ? employeeData : mockEmployees);
         setRooms(roomData?.length ? roomData : mockRooms);
         
@@ -121,7 +134,60 @@ export default function Booking() {
     return selectedServices.reduce((sum, s) => sum + (s.duration || 60), 0);
   }, [selectedServices]);
 
+  const applyPromo = async () => {
+    setPromoError('');
+    if (!promoCode.trim()) return;
+    try {
+      const code = promoCode.trim().toUpperCase();
+      const checkRes = await axiosClient.get(`/promotions/check/${code}`);
+      if (!checkRes.valid) {
+        setPromoError('Mã khuyến mãi không hợp lệ hoặc đã hết hạn.');
+        return;
+      }
+      const promo = await axiosClient.get(`/promotions/code/${code}`);
+      setAppliedPromo(promo);
+    } catch (err) {
+      setPromoError('Mã khuyến mãi không tồn tại hoặc đã hết hạn.');
+    }
+  };
+
+  const removePromo = () => {
+    setPromoCode('');
+    setAppliedPromo(null);
+    setPromoError('');
+  };
+
+  const discountAmount = useMemo(() => {
+    if (!appliedPromo) return 0;
+    if (appliedPromo.discountType === 'PERCENT') {
+      return (totalPrice * (appliedPromo.discountValue || 0)) / 100;
+    }
+    return appliedPromo.discountValue || 0;
+  }, [totalPrice, appliedPromo]);
+
+  const finalPrice = useMemo(() => {
+    const res = totalPrice - discountAmount;
+    return res < 0 ? 0 : res;
+  }, [totalPrice, discountAmount]);
+
   const update = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+
+  const lastSelectedIdsRef = useRef('');
+  useEffect(() => {
+    const currentIdsStr = (form.serviceIds || []).sort().join(',');
+    if (lastSelectedIdsRef.current !== currentIdsStr) {
+      lastSelectedIdsRef.current = currentIdsStr;
+      const serviceWithPromo = selectedServices.find(s => s.promotions && s.promotions.length > 0);
+      if (serviceWithPromo) {
+        const bestPromo = serviceWithPromo.promotions[0];
+        setAppliedPromo(bestPromo);
+        setPromoCode(bestPromo.code);
+      } else {
+        setAppliedPromo(null);
+        setPromoCode('');
+      }
+    }
+  }, [selectedServices, form.serviceIds]);
 
   // Xử lý bật/tắt dịch vụ khi người dùng click
   const toggleService = (sId) => {
@@ -210,28 +276,36 @@ export default function Booking() {
   // Ánh xạ ảnh phòng động theo mô tả trong ảnh mẫu
   const getRoomDetails = (room, index) => {
     const name = room?.roomName || '';
+    const desc = room?.description || '';
+    const rawImage = room?.image || '';
+
+    const imageHost = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:8080';
+    const finalImage = rawImage 
+      ? (rawImage.startsWith('http') ? rawImage : `${imageHost}${rawImage}`)
+      : '';
+
     const idx = index % 3;
     if (idx === 0) {
       return {
         name: name || 'Phòng VIP Orchid',
         badge: 'VIP Orchid',
-        desc: 'Không gian riêng tư, nến thơm, âm nhạc nhẹ nhàng và bồn tắm thảo dược cao cấp.',
-        image: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=400&auto=format&fit=crop'
+        desc: desc || 'Không gian riêng tư, nến thơm, âm nhạc nhẹ nhàng và bồn tắm thảo dược cao cấp.',
+        image: finalImage || 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=400&auto=format&fit=crop'
       };
     }
     if (idx === 1) {
       return {
         name: name || 'Phòng Lotus Single',
         badge: 'Còn trống',
-        desc: 'Không gian tối giản, yên tĩnh tuyệt đối, lý tưởng cho liệu trình cá nhân chuyên sâu.',
-        image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=400&auto=format&fit=crop'
+        desc: desc || 'Không gian tối giản, yên tĩnh tuyệt đối, lý tưởng cho liệu trình cá nhân chuyên sâu.',
+        image: finalImage || 'https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=400&auto=format&fit=crop'
       };
     }
     return {
       name: name || 'Phòng Jasmine Double',
       badge: 'Còn trống',
-      desc: 'Phòng đôi rộng rãi, hương lài dịu nhẹ, thích hợp cho các cặp đôi hoặc bạn bè.',
-      image: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=400&auto=format&fit=crop'
+      desc: desc || 'Phòng đôi rộng rãi, hương lài dịu nhẹ, thích hợp cho các cặp đôi hoặc bạn bè.',
+      image: finalImage || 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=400&auto=format&fit=crop'
     };
   };
 
@@ -327,18 +401,20 @@ export default function Booking() {
         customer: { id: customer.id },
         employee: selectedEmployee?.id ? { id: selectedEmployee.id } : null,
         room: selectedRoom?.id ? { id: selectedRoom.id } : null,
+        promotion: appliedPromo ? { id: appliedPromo.id } : null,
         appointmentDate: form.appointmentDate,
         appointmentTime: form.appointmentTime.length === 5 ? `${form.appointmentTime}:00` : form.appointmentTime,
         status: 'DANG_CHO',
         note: finalNote,
-        appointmentDetails: [
-          {
-            service: { id: Number(form.serviceIds[0]) }, // Dịch vụ chính
-            price: totalPrice, // Tổng tiền của tất cả dịch vụ
-            duration: totalDuration, // Tổng thời gian
-            note: finalNote,
-          },
-        ],
+        price: finalPrice,
+        duration: totalDuration,
+        paymentMethod: form.paymentMethod,
+        appointmentDetails: selectedServices.map((s) => ({
+          service: { id: Number(s.id) },
+          price: Number(s.price || 0),
+          duration: Number(s.duration || 60),
+          note: finalNote,
+        })),
       };
       
       const created = await appointmentApi.create(payload);
@@ -346,7 +422,7 @@ export default function Booking() {
       // Nếu người dùng chọn thanh toán online qua VNPay
       if (form.paymentMethod === 'VNPAY') {
         const res = await axiosClient.get('/vnpay/create-payment', {
-          params: { appointmentId: created.id, amount: totalPrice }
+          params: { appointmentId: created.id, amount: finalPrice }
         });
         if (res && res.paymentUrl) {
           window.location.href = res.paymentUrl;
@@ -408,6 +484,15 @@ export default function Booking() {
               {services.map((s, index) => {
                 const details = getServiceDetails(s, index);
                 const isSelected = form.serviceIds?.includes(String(s.id));
+                const bestPromo = s.promotions && s.promotions[0];
+                let discountedPrice = null;
+                if (bestPromo) {
+                  if (bestPromo.discountType === 'PERCENT') {
+                    discountedPrice = s.price * (1 - bestPromo.discountValue / 100);
+                  } else if (bestPromo.discountType === 'AMOUNT') {
+                    discountedPrice = Math.max(0, s.price - bestPromo.discountValue);
+                  }
+                }
                 return (
                   <div 
                     key={s.id} 
@@ -419,8 +504,21 @@ export default function Booking() {
                       <h4>{s.name}</h4>
                       <p>{details.duration} Phút</p>
                     </div>
-                    <div className="service-card-price">
-                      {money(s.price).replace(' VNĐ', '').replace('.000', 'k')}
+                    <div className="service-card-price" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', minWidth: '70px' }}>
+                      {discountedPrice !== null ? (
+                        <>
+                          <span style={{ fontWeight: 700, color: '#9c27b0' }}>
+                            {money(discountedPrice).replace(' VNĐ', '').replace('.000', 'k').replace('đ', '')}
+                          </span>
+                          <span style={{ textDecoration: 'line-through', fontSize: '11px', color: 'var(--muted)' }}>
+                            {money(s.price).replace(' VNĐ', '').replace('.000', 'k').replace('đ', '')}
+                          </span>
+                        </>
+                      ) : (
+                        <span style={{ fontWeight: 700 }}>
+                          {money(s.price).replace(' VNĐ', '').replace('.000', 'k').replace('đ', '')}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -715,10 +813,62 @@ export default function Booking() {
                   </div>
                 </div>
 
-                <div className="summary-section">
+                {/* Mã khuyến mãi */}
+                <div className="summary-section" style={{ borderTop: '1px solid var(--line)', paddingTop: '16px' }}>
+                  <h4>Mã khuyến mãi</h4>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '8px', marginBottom: '8px' }}>
+                    <input 
+                      type="text" 
+                      placeholder="Nhập mã giảm giá..." 
+                      value={promoCode} 
+                      onChange={(e) => setPromoCode(e.target.value)}
+                      disabled={!!appliedPromo}
+                      style={{ flex: 1, textTransform: 'uppercase', padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--line)' }}
+                    />
+                    {appliedPromo ? (
+                      <button 
+                        type="button" 
+                        className="btn danger small" 
+                        onClick={removePromo}
+                        style={{ borderRadius: '8px', padding: '8px 16px' }}
+                      >
+                        Gỡ bỏ
+                      </button>
+                    ) : (
+                      <button 
+                        type="button" 
+                        className="btn solid small" 
+                        onClick={applyPromo}
+                        style={{ borderRadius: '8px', padding: '8px 16px', background: 'var(--primary)', color: '#fff', border: 'none' }}
+                      >
+                        Áp dụng
+                      </button>
+                    )}
+                  </div>
+                  {promoError && <p style={{ color: '#af3939', fontSize: '12px', marginTop: '4px', margin: 0 }}>{promoError}</p>}
+                  {appliedPromo && (
+                    <p style={{ color: '#247a47', fontSize: '13px', marginTop: '4px', margin: 0, fontWeight: 600 }}>
+                      Đã áp dụng: {appliedPromo.name} (Giảm {appliedPromo.discountType === 'PERCENT' ? `${appliedPromo.discountValue}%` : money(appliedPromo.discountValue)})
+                    </p>
+                  )}
+                </div>
+
+                <div className="summary-section" style={{ borderTop: '1px solid var(--line)', paddingTop: '16px' }}>
+                  {appliedPromo && (
+                    <div className="summary-row" style={{ marginBottom: '6px' }}>
+                      <span>Tạm tính:</span>
+                      <span>{money(totalPrice)}</span>
+                    </div>
+                  )}
+                  {appliedPromo && (
+                    <div className="summary-row" style={{ marginBottom: '6px', color: '#af3939' }}>
+                      <span>Giảm giá:</span>
+                      <span>-{money(discountAmount)}</span>
+                    </div>
+                  )}
                   <div className="summary-row" style={{ marginTop: '10px' }}>
                     <span style={{ fontSize: '16px', fontWeight: 'bold' }}>Tổng cộng:</span>
-                    <span className="summary-total">{money(totalPrice)}</span>
+                    <span className="summary-total">{money(finalPrice)}</span>
                   </div>
                 </div>
               </div>

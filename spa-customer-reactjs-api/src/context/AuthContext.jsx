@@ -1,15 +1,20 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 import { authApi } from '../api/authApi';
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
+// Read user from localStorage synchronously to avoid redirect-on-refresh
+function getInitialUser() {
+  try {
     const saved = localStorage.getItem('spa_user');
-    if (saved) setUser(JSON.parse(saved));
-  }, []);
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(getInitialUser);
 
   const login = async ({ username, password }) => {
     const result = await authApi.login({ username, password });

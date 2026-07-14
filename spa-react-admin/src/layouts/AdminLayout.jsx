@@ -14,6 +14,7 @@ import PromotionList from '../pages/promotions/PromotionList.jsx';
 import ReviewList from '../pages/reviews/ReviewList.jsx';
 import Reports from '../pages/reports/Reports.jsx';
 import UserList from '../pages/users/UserList.jsx';
+import BannerList from '../pages/banners/BannerList.jsx';
 import { pageConfigs } from '../utils/constants.js';
 
 export default function AdminLayout() {
@@ -44,6 +45,7 @@ export default function AdminLayout() {
             <Route path="invoices" element={<InvoiceList config={pageConfigs.invoices} />} />
             <Route path="promotions" element={<PromotionList config={pageConfigs.promotions} />} />
             <Route path="reviews" element={<ReviewList config={pageConfigs.reviews} />} />
+            <Route path="banners" element={<BannerList config={pageConfigs.banners} />} />
             <Route path="reports" element={<Reports />} />
           </Routes>
         </section>

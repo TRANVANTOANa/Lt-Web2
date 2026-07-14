@@ -10,6 +10,7 @@ public interface ReviewService {
     Optional<Review> findById(Long id);
     List<Review> findByCustomerId(Long customerId);
     List<Review> findByServiceId(Long serviceId);
+    List<Review> findByAppointmentId(Long appointmentId);
     Review save(Review review);
     void deleteById(Long id);
 }

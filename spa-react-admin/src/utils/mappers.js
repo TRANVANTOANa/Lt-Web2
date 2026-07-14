@@ -61,6 +61,7 @@ export const mapApiToUi = (endpoint, item) => {
         ...item,
         customerName: item.customer?.fullName || item.customerName || '',
         serviceName: item.service?.name || item.serviceName || '',
+        employeeName: item.employee?.fullName || item.employeeName || 'Không có KTV',
         createdAt: item.createdAt ? item.createdAt.toString().substring(0, 10) : item.createdAt || '',
         status: 'SHOW'
       };

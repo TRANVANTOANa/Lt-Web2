@@ -25,10 +25,26 @@ public class Review {
     @JoinColumn(name = "service_id")
     private SpaService service;
 
-    private Integer rating; // 1-5
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id")
+    private Employee employee;
+
+    private Integer rating; // 1-5 đánh giá dịch vụ
 
     @Column(columnDefinition = "TEXT")
-    private String comment;
+    private String comment; // nhận xét dịch vụ
+
+    private Integer employeeRating; // 1-5 đánh giá kỹ thuật viên
+
+    @Column(columnDefinition = "TEXT")
+    private String employeeComment; // nhận xét kỹ thuật viên
+
+    private String imageUrl; // hình ảnh thực tế (tùy chọn)
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "appointment_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties("appointmentDetails")
+    private Appointment appointment;
 
     private LocalDateTime createdAt;
 

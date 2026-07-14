@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { fieldLabels } from '../utils/constants.js';
+import axiosClient from '../api/axiosClient.js';
 
 export default function Modal({ fields, initial, onClose, onSubmit, lookups }) {
   const [form, setForm] = useState(() => {
@@ -34,6 +35,7 @@ export default function Modal({ fields, initial, onClose, onSubmit, lookups }) {
   }
 
   const getFieldInput = (f) => {
+    console.log("getFieldInput field:", f, "is_image:", f === 'image', "typeof:", typeof f, "len:", f.length);
     const val = form[f] || '';
     const onChange = e => setForm({ ...form, [f]: e.target.value });
 
@@ -158,7 +160,7 @@ export default function Modal({ fields, initial, onClose, onSubmit, lookups }) {
         </select>
       );
     }
-    if (f === 'roomName') {
+    if (f === 'roomName' && fields.includes('appointmentDate')) {
       return (
         <select value={val} onChange={onChange}>
           <option value="">Chọn phòng</option>
@@ -172,6 +174,64 @@ export default function Modal({ fields, initial, onClose, onSubmit, lookups }) {
           <option value="">Chọn dịch vụ</option>
           {lookups.services.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
         </select>
+      );
+    }
+
+    if (f === 'image' || f === 'imageUrl') {
+      const handleUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+          setForm({ ...form, [f]: 'Đang tải lên...' });
+          const res = await axiosClient.post('/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          const url = res.url || res;
+          setForm({ ...form, [f]: url });
+        } catch (err) {
+          alert('Tải ảnh lên thất bại: ' + err.message);
+          setForm({ ...form, [f]: '' });
+        }
+      };
+
+      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+      const host = apiBase.replace('/api', '');
+      const fullImgUrl = val && !val.startsWith('http') && !val.startsWith('Đang') ? `${host}${val}` : val;
+
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleUpload}
+              style={{ border: 'none', padding: 0 }}
+            />
+            {val && val.startsWith('Đang') && <span style={{ fontSize: '12px', color: '#ff6b6b' }}>{val}</span>}
+          </div>
+          {val && !val.startsWith('Đang') && (
+            <div style={{ position: 'relative', width: '120px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid var(--line)' }}>
+              <img 
+                src={fullImgUrl} 
+                alt="Preview" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+              />
+              <button 
+                type="button" 
+                onClick={() => setForm({ ...form, [f]: '' })}
+                style={{
+                  position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.5)', color: '#fff', 
+                  border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', 
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </div>
       );
     }
 

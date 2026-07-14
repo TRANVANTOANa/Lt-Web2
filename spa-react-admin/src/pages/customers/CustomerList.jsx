@@ -5,13 +5,16 @@ import { mapApiToUi, mapUiToApi } from '../../utils/mappers.js';
 import StatusBadge from '../../components/StatusBadge.jsx';
 import CustomerForm from './CustomerForm.jsx';
 import CustomerDelete from './CustomerDelete.jsx';
+import ViewDetailModal from '../../components/ViewDetailModal.jsx';
 
 export default function CustomerList({ config }) {
   const [items, setItems] = useState([]);
   const [keyword, setKeyword] = useState('');
+  const [customerTypeFilter, setCustomerTypeFilter] = useState('all');
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [viewing, setViewing] = useState(null);
   const [lookups, setLookups] = useState({ customers: [], employees: [], rooms: [], services: [], categories: [] });
   const api = useMemo(() => crudApi(config.endpoint), [config.endpoint]);
 
@@ -45,7 +48,11 @@ export default function CustomerList({ config }) {
     loadLookups();
   }, [config.endpoint]);
 
-  const filtered = items.filter(x => !keyword || Object.values(x).some(v => String(v ?? '').toLowerCase().includes(keyword.toLowerCase())));
+  const filtered = items.filter(x => {
+    const matchesKeyword = !keyword || Object.values(x).some(v => String(v ?? '').toLowerCase().includes(keyword.toLowerCase()));
+    const matchesType = customerTypeFilter === 'all' || x.customerType === customerTypeFilter;
+    return matchesKeyword && matchesType;
+  });
 
   function openCreate() { setEditing(null); setModal(true); }
   function openEdit(row) { setEditing(row); setModal(true); }
@@ -85,8 +92,29 @@ export default function CustomerList({ config }) {
         </div>
         <button className="btn btn-primary" onClick={openCreate}>+ Thêm mới</button>
       </div>
-      <div className="toolbar">
+      <div className="toolbar" style={{ display: 'flex', gap: '12px' }}>
         <input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Tìm kiếm..." />
+        
+        <select 
+          value={customerTypeFilter} 
+          onChange={e => setCustomerTypeFilter(e.target.value)}
+          style={{
+            height: '42px',
+            border: '1px solid var(--line)',
+            borderRadius: '14px',
+            padding: '0 14px',
+            outline: 'none',
+            background: '#fff',
+            cursor: 'pointer',
+            fontWeight: 600,
+            color: '#6d5d74'
+          }}
+        >
+          <option value="all">Loại khách hàng (Tất cả)</option>
+          <option value="VIP">VIP</option>
+          <option value="THAN_THIET">Thân thiết</option>
+          <option value="THUONG">Thường (THUONG)</option>
+        </select>
       </div>
       <div className="table-card">
         <table className="data-table">
@@ -106,7 +134,7 @@ export default function CustomerList({ config }) {
                 ))}
                 <td>
                   <div className="action-group">
-                    <button className="btn-mini view" onClick={() => alert(JSON.stringify(row, null, 2))}>Xem</button>
+                    <button className="btn-mini view" onClick={() => setViewing(row)}>Xem</button>
                     <button className="btn-mini edit" onClick={() => openEdit(row)}>Sửa</button>
                     <button className="btn-mini delete" onClick={() => openDelete(row)}>Xóa</button>
                   </div>
@@ -118,6 +146,14 @@ export default function CustomerList({ config }) {
       </div>
       {modal && <CustomerForm fields={config.fields} initial={editing} onClose={() => setModal(false)} onSubmit={save} lookups={lookups} />}
       {deleting && <CustomerDelete item={deleting} onConfirm={handleDelete} onCancel={() => setDeleting(null)} />}
+      {viewing && (
+        <ViewDetailModal
+          title={`Chi tiết ${config.title.toLowerCase().replace('quản lý ', '')}`}
+          row={viewing}
+          columns={config.columns}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   );
 }

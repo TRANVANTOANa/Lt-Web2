@@ -1,4 +1,4 @@
-import { FiCalendar, FiCreditCard, FiDollarSign, FiGift, FiGrid, FiHome, FiMessageCircle, FiPieChart, FiSearch, FiSettings, FiShoppingBag, FiStar, FiUser, FiUsers, FiShield } from 'react-icons/fi';
+import { FiCalendar, FiCreditCard, FiDollarSign, FiGift, FiGrid, FiHome, FiMessageCircle, FiPieChart, FiSearch, FiSettings, FiShoppingBag, FiStar, FiUser, FiUsers, FiShield, FiImage } from 'react-icons/fi';
 
 export const money = (n) => Number(n || 0).toLocaleString('vi-VN') + ' VNĐ';
 
@@ -67,6 +67,10 @@ export const mock = {
   users: [
     { id: 1, username: 'admin', fullName: 'Admin Ly', email: 'admin@spamanagement.com', phone: '0987654321', roleName: 'ROLE_ADMIN', status: 'ACTIVE' },
     { id: 2, username: 'staff', fullName: 'Nhân Viên Spa', email: 'staff@spamanagement.com', phone: '0912345678', roleName: 'ROLE_NHAN_VIEN', status: 'ACTIVE' },
+  ],
+  banners: [
+    { id: 1, title: 'Thư giãn cơ thể, làm đẹp làn da, phục hồi năng lượng mỗi ngày', subtitle: 'Spa chăm sóc sắc đẹp cao cấp', imageUrl: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1200', linkUrl: '/booking', orderNo: 1, status: 'ACTIVE' },
+    { id: 2, title: 'Ưu đãi 20% cho liệu trình Chăm sóc da lần đầu', subtitle: 'Khơi dậy vẻ đẹp tự nhiên của bạn', imageUrl: 'https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?q=80&w=1200', linkUrl: '/services', orderNo: 2, status: 'ACTIVE' }
   ]
 };
 
@@ -93,8 +97,8 @@ export const pageConfigs = {
   },
   services: {
     title: 'Quản lý dịch vụ Spa', desc: 'Thêm, sửa, xóa, tìm kiếm dịch vụ Spa.', endpoint: '/spa-services', mock: mock.services,
-    columns: [['id','Mã'], ['name','Tên dịch vụ'], ['categoryName','Danh mục'], ['price','Giá','money'], ['duration','Thời gian (phút)'], ['status','Trạng thái','status']],
-    fields: ['name','categoryName','price','duration','description','status']
+    columns: [['id','Mã'], ['image','Ảnh','image'], ['name','Tên dịch vụ'], ['categoryName','Danh mục'], ['price','Giá','money'], ['duration','Thời gian (phút)'], ['status','Trạng thái','status']],
+    fields: ['name','categoryName','price','duration','image','description','status']
   },
   appointments: {
     title: 'Quản lý lịch hẹn', desc: 'Xác nhận, hủy và cập nhật trạng thái lịch hẹn.', endpoint: '/appointments', mock: mock.appointments,
@@ -103,8 +107,8 @@ export const pageConfigs = {
   },
   rooms: {
     title: 'Quản lý phòng Spa', desc: 'Quản lý phòng dịch vụ và trạng thái sử dụng.', endpoint: '/rooms', mock: mock.rooms,
-    columns: [['id','Mã'], ['roomName','Tên phòng'], ['description','Mô tả'], ['status','Trạng thái','status']],
-    fields: ['roomName','description','status']
+    columns: [['id','Mã'], ['image','Ảnh','image'], ['roomName','Tên phòng'], ['description','Mô tả'], ['status','Trạng thái','status']],
+    fields: ['roomName','image','description','status']
   },
   invoices: {
     title: 'Quản lý hóa đơn', desc: 'Tạo hóa đơn, xem chi tiết và cập nhật thanh toán.', endpoint: '/invoices', mock: mock.invoices,
@@ -123,8 +127,24 @@ export const pageConfigs = {
   },
   reviews: {
     title: 'Quản lý đánh giá', desc: 'Quản lý đánh giá của khách hàng sau khi sử dụng dịch vụ.', endpoint: '/reviews', mock: mock.reviews,
-    columns: [['id','Mã'], ['customerName','Khách hàng'], ['serviceName','Dịch vụ'], ['rating','Sao'], ['comment','Nhận xét'], ['createdAt','Ngày']],
+    columns: [
+      ['id','Mã'], 
+      ['customerName','Khách hàng'], 
+      ['serviceName','Dịch vụ'], 
+      ['rating','Sao'], 
+      ['comment','Nhận xét'],
+      ['imageUrl','Hình ảnh','image'],
+      ['employeeName','KTV'],
+      ['employeeRating','Sao KTV'],
+      ['employeeComment','Nhận xét KTV'],
+      ['createdAt','Ngày']
+    ],
     fields: ['customerName','serviceName','rating','comment']
+  },
+  banners: {
+    title: 'Quản lý banner', desc: 'Thêm, sửa, xóa, sắp xếp banner quảng cáo động hiển thị ở trang chủ.', endpoint: '/banners', mock: mock.banners,
+    columns: [['id','Mã'], ['title','Tiêu đề'], ['subtitle','Tiêu đề phụ'], ['imageUrl','Đường dẫn ảnh'], ['linkUrl','Liên kết'], ['orderNo','Thứ tự'], ['status','Trạng thái','status']],
+    fields: ['title', 'subtitle', 'imageUrl', 'linkUrl', 'orderNo', 'status']
   }
 };
 
@@ -134,6 +154,7 @@ export const menus = [
   ['/service-categories', 'Danh mục', FiGrid], ['/spa-services', 'Dịch vụ', FiStar], ['/appointments', 'Lịch hẹn', FiCalendar],
   ['/rooms', 'Phòng', FiShoppingBag], ['/invoices', 'Hóa đơn', FiCreditCard],
   ['/promotions', 'Khuyến mãi', FiGift], ['/reviews', 'Đánh giá', FiMessageCircle], ['/reports', 'Thống kê', FiPieChart],
+  ['/banners', 'Banner', FiImage]
 ];
 
 export const fieldLabels = {
@@ -149,5 +170,6 @@ export const fieldLabels = {
   paymentDate: 'Ngày thanh toán', code: 'Mã khuyến mãi', discountType: 'Loại giảm giá',
   discountValue: 'Giá trị giảm', discountPercent: 'Phần trăm giảm',
   startDate: 'Ngày bắt đầu', endDate: 'Ngày kết thúc', rating: 'Số sao', comment: 'Nhận xét',
-  username: 'Tên tài khoản', password: 'Mật khẩu', roleName: 'Vai trò'
+  username: 'Tên tài khoản', password: 'Mật khẩu', roleName: 'Vai trò',
+  title: 'Tiêu đề', subtitle: 'Tiêu đề phụ', imageUrl: 'Đường dẫn ảnh', linkUrl: 'Liên kết', orderNo: 'Thứ tự', image: 'Hình ảnh'
 };

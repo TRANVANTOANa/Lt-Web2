@@ -1,6 +1,7 @@
 package toanweb2.DoAnWeb2.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import toanweb2.DoAnWeb2.entity.SpaService;
 import toanweb2.DoAnWeb2.repository.SpaServiceRepository;
@@ -75,4 +76,15 @@ public class SpaServiceServiceImpl implements SpaServiceService {
         }
         spaServiceRepository.save(spaService);
     }
+
+    @Override
+    public List<SpaService> findLatest(int limit) {
+        return spaServiceRepository.findByStatusOrderByCreatedAtDesc("ACTIVE", PageRequest.of(0, limit));
+    }
+
+    @Override
+    public List<SpaService> findHot(int limit) {
+        return spaServiceRepository.findHotServices(PageRequest.of(0, limit));
+    }
 }
+

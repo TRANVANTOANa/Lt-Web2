@@ -22,6 +22,8 @@ public class Room {
 
     private String description;
 
+    private String image;
+
     @Column(columnDefinition = "VARCHAR(20) DEFAULT 'TRONG'")
     private String status; // TRONG, DANG_SU_DUNG, BAO_TRI
 

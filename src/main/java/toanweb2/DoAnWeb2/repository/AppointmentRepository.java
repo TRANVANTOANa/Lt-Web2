@@ -21,4 +21,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     @Query("SELECT a FROM Appointment a WHERE a.room.id = :roomId AND a.appointmentDate = :date AND a.status NOT IN ('DA_HUY', 'KHACH_KHONG_DEN')")
     List<Appointment> findByRoomIdAndDate(@Param("roomId") Long roomId, @Param("date") LocalDate date);
+
+    @Query("SELECT a FROM Appointment a LEFT JOIN FETCH a.services WHERE a.id = :id")
+    java.util.Optional<Appointment> findByIdWithServices(@Param("id") Long id);
 }

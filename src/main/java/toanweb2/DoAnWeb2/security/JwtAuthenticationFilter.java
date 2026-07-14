@@ -29,15 +29,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = getJwtFromRequest(request);
 
+            logger.debug(">>> JWT Filter - Path: " + request.getRequestURI() + ", Method: " + request.getMethod());
+            logger.debug(">>> JWT Filter - Token present: " + StringUtils.hasText(jwt));
+
             if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
                 String username = jwtTokenProvider.getUsernameFromToken(jwt);
                 UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+
+                logger.debug(">>> JWT Filter - User: " + username + ", Authorities: " + userDetails.getAuthorities());
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+            } else if (StringUtils.hasText(jwt)) {
+                logger.warn(">>> JWT Filter - Token INVALID for path: " + request.getRequestURI());
             }
         } catch (Exception ex) {
             logger.error("Không thể set user authentication trong security context", ex);

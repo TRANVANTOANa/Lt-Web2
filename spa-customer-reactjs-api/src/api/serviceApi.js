@@ -6,6 +6,8 @@ export const serviceApi = {
   search: (keyword) => axiosClient.get('/spa-services/search', { params: { keyword } }),
   getByCategory: (categoryId) => axiosClient.get(`/spa-services/category/${categoryId}`),
   getActive: () => axiosClient.get('/spa-services/status/ACTIVE'),
+  getLatest: (limit) => axiosClient.get('/spa-services/latest', { params: { limit } }),
+  getHot: (limit) => axiosClient.get('/spa-services/hot', { params: { limit } }),
 };
 
 export const categoryApi = {

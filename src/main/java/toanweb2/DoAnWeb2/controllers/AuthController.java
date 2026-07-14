@@ -29,6 +29,8 @@ public class AuthController {
         private final AuthenticationManager authenticationManager;
         private final JwtTokenProvider jwtTokenProvider;
         private final CustomerRepository customerRepository;
+        private final org.springframework.mail.javamail.JavaMailSender mailSender;
+        private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
         @PostMapping("/register")
         public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
@@ -127,11 +129,61 @@ public class AuthController {
                                         "username", request.username(),
                                         "fullName", user != null ? (user.getFullName() != null ? user.getFullName() : request.username()) : request.username(),
                                         "role", user != null && user.getRole() != null ? user.getRole().getRoleName() : "ROLE_ADMIN",
-                                        "imageUrl", user != null && user.getImageUrl() != null ? user.getImageUrl() : ""
+                                        "imageUrl", user != null && user.getImageUrl() != null ? user.getImageUrl() : "",
+                                        "phone", user != null && user.getPhone() != null ? user.getPhone() : "",
+                                        "email", user != null && user.getEmail() != null ? user.getEmail() : ""
                         ));
                 } catch (AuthenticationException e) {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                                         .body(Map.of("message", "Sai tài khoản hoặc mật khẩu"));
+                }
+        }
+
+        @PostMapping("/forgot-password")
+        public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+                if (request.email() == null || request.email().isBlank()) {
+                        return ResponseEntity.badRequest().body(Map.of("message", "Email không được để trống"));
+                }
+
+                java.util.Optional<User> userOptional = userService.findByEmail(request.email());
+                if (userOptional.isEmpty()) {
+                        return ResponseEntity.badRequest().body(Map.of("message", "Email không tồn tại trong hệ thống"));
+                }
+
+                User user = userOptional.get();
+
+                // Tạo mật khẩu tạm thời ngẫu nhiên độ dài 8 ký tự
+                String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                java.util.Random rnd = new java.util.Random();
+                StringBuilder sb = new StringBuilder(8);
+                for (int i = 0; i < 8; i++) {
+                        sb.append(chars.charAt(rnd.nextInt(chars.length())));
+                }
+                String tempPassword = sb.toString();
+
+                try {
+                        // 1. Gửi email
+                        org.springframework.mail.SimpleMailMessage message = new org.springframework.mail.SimpleMailMessage();
+                        message.setFrom("pukachi1132@gmail.com");
+                        message.setTo(user.getEmail());
+                        message.setSubject("[Spa Beauty] Khôi phục mật khẩu tài khoản");
+                        message.setText("Xin chào " + (user.getFullName() != null ? user.getFullName() : user.getUsername()) + ",\n\n" +
+                                        "Bạn đã yêu cầu khôi phục mật khẩu cho tài khoản tại Spa Beauty.\n" +
+                                        "Mật khẩu tạm thời mới của bạn là: " + tempPassword + "\n\n" +
+                                        "Vui lòng đăng nhập bằng mật khẩu tạm thời này và thay đổi mật khẩu ngay lập tức để bảo mật tài khoản.\n\n" +
+                                        "Trân trọng,\n" +
+                                        "Spa Beauty Support Team");
+                        mailSender.send(message);
+
+                        // 2. Cập nhật mật khẩu trong Database
+                        user.setPassword(tempPassword);
+                        userService.save(user);
+
+                        return ResponseEntity.ok(Map.of("message", "Mật khẩu mới đã được gửi tới email của bạn."));
+                } catch (Exception e) {
+                        e.printStackTrace();
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                        .body(Map.of("message", "Không thể gửi email khôi phục mật khẩu. Lỗi: " + e.getMessage()));
                 }
         }
 
@@ -168,5 +220,8 @@ public class AuthController {
                         String status,
                         String roleName,
                         String imageUrl) {
+        }
+
+        public record ForgotPasswordRequest(String email) {
         }
 }

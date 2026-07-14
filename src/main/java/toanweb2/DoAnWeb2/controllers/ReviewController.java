@@ -39,6 +39,11 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.findByServiceId(serviceId));
     }
 
+    @GetMapping("/appointment/{appointmentId}")
+    public ResponseEntity<List<Review>> getByAppointment(@PathVariable Long appointmentId) {
+        return ResponseEntity.ok(reviewService.findByAppointmentId(appointmentId));
+    }
+
     @PostMapping
     public ResponseEntity<Review> createReview(@RequestBody Review review) {
         return ResponseEntity.status(HttpStatus.CREATED).body(reviewService.save(review));

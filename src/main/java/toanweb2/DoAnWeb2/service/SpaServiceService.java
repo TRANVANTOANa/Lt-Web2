@@ -15,4 +15,6 @@ public interface SpaServiceService {
     SpaService update(Long id, SpaService spaService);
     void deleteById(Long id);
     void toggleStatus(Long id);
+    List<SpaService> findLatest(int limit);
+    List<SpaService> findHot(int limit);
 }

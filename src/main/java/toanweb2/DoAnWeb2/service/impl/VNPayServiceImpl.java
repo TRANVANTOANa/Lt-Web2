@@ -28,6 +28,8 @@ public class VNPayServiceImpl implements VNPayService {
 
     private final AppointmentRepository appointmentRepository;
     private final InvoiceRepository invoiceRepository;
+    private final toanweb2.DoAnWeb2.repository.SpaServiceRepository spaServiceRepository;
+    private final toanweb2.DoAnWeb2.service.EmailService emailService;
 
     @Value("${vnpay.tmn-code}")
     private String vnp_TmnCode;
@@ -140,22 +142,48 @@ public class VNPayServiceImpl implements VNPayService {
             Long appointmentId = Long.valueOf(txnRef);
             Appointment appointment = appointmentRepository.findById(appointmentId).orElse(null);
             if (appointment != null) {
-                appointment.setStatus("DA_THANH_TOAN");
+                appointment.setStatus("DA_XAC_NHAN");
                 appointmentRepository.save(appointment);
 
-                // Tạo hóa đơn tự động
-                Invoice invoice = Invoice.builder()
-                        .appointment(appointment)
-                        .customer(appointment.getCustomer())
-                        .employee(appointment.getEmployee())
-                        .totalAmount(appointment.getPrice())
-                        .discountAmount(BigDecimal.ZERO)
-                        .finalAmount(appointment.getPrice())
-                        .paymentMethod("VNPAY")
-                        .paymentStatus("DA_THANH_TOAN")
-                        .paidAt(LocalDateTime.now())
-                        .build();
+                // Cập nhật hoặc tạo hóa đơn tự động
+                Invoice invoice = invoiceRepository.findByAppointmentId(appointment.getId()).orElse(null);
+                if (invoice == null) {
+                    invoice = Invoice.builder()
+                            .appointment(appointment)
+                            .customer(appointment.getCustomer())
+                            .employee(appointment.getEmployee())
+                            .totalAmount(appointment.getPrice())
+                            .discountAmount(BigDecimal.ZERO)
+                            .finalAmount(appointment.getPrice())
+                            .build();
+                }
+                invoice.setPaymentMethod("VNPAY");
+                invoice.setPaymentStatus("DA_THANH_TOAN");
+                invoice.setPaidAt(LocalDateTime.now());
                 invoiceRepository.save(invoice);
+
+                // Nạp đầy đủ thông tin các SpaService từ Database để gửi Mail chính xác
+                Appointment appWithServices = appointmentRepository.findByIdWithServices(appointment.getId()).orElse(appointment);
+                java.util.List<toanweb2.DoAnWeb2.entity.SpaService> fullServices = new java.util.ArrayList<>();
+                if (appWithServices.getServices() != null && !appWithServices.getServices().isEmpty()) {
+                    for (toanweb2.DoAnWeb2.entity.SpaService s : appWithServices.getServices()) {
+                        toanweb2.DoAnWeb2.entity.SpaService fullSvc = spaServiceRepository.findById(s.getId()).orElse(null);
+                        if (fullSvc != null) {
+                            fullServices.add(fullSvc);
+                        }
+                    }
+                } else if (appWithServices.getService() != null) {
+                    toanweb2.DoAnWeb2.entity.SpaService fullSvc = spaServiceRepository.findById(appWithServices.getService().getId()).orElse(null);
+                    if (fullSvc != null) {
+                        fullServices.add(fullSvc);
+                    }
+                }
+
+                // Gửi Gmail báo đặt lịch và thanh toán thành công kèm chi tiết giảm giá
+                BigDecimal discount = invoice.getDiscountAmount() != null ? invoice.getDiscountAmount() : BigDecimal.ZERO;
+                BigDecimal finalAmt = invoice.getFinalAmount();
+                emailService.sendBookingEmail(appointment, fullServices, discount, finalAmt, true);
+
                 return true;
             }
         }

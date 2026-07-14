@@ -5,6 +5,7 @@ import { mapApiToUi, mapUiToApi } from '../../utils/mappers.js';
 import StatusBadge from '../../components/StatusBadge.jsx';
 import InvoiceForm from './InvoiceForm.jsx';
 import InvoiceDelete from './InvoiceDelete.jsx';
+import InvoiceDetailModal from '../../components/InvoiceDetailModal.jsx';
 
 export default function InvoiceList({ config }) {
   const [items, setItems] = useState([]);
@@ -12,6 +13,7 @@ export default function InvoiceList({ config }) {
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [viewing, setViewing] = useState(null);
   const [lookups, setLookups] = useState({ customers: [], employees: [], rooms: [], services: [], categories: [] });
   const api = useMemo(() => crudApi(config.endpoint), [config.endpoint]);
 
@@ -47,11 +49,44 @@ export default function InvoiceList({ config }) {
     }
   }
 
+  async function changeStatus(row, newStatus) {
+    if (row.paymentStatus === 'PAID' && newStatus === 'PENDING') {
+      alert("Không thể chuyển đổi ngược hóa đơn đã thanh toán thành chưa thanh toán!");
+      return;
+    }
+    if (newStatus === 'PAID') {
+      await handlePayment(row);
+    }
+  }
+
   return (
     <div>
       <div className="page-header"><div><h1>{config.title}</h1><p>{config.desc}</p></div></div>
       <div className="toolbar"><input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Tìm kiếm..." /></div>
-      <div className="table-card"><table className="data-table"><thead><tr>{config.columns.map(c => <th key={c[0]}>{c[1]}</th>)}<th>Hành động</th></tr></thead><tbody>{filtered.map(row => <tr key={row.id}>{config.columns.map(c => <td key={c[0]}>{c[2] === 'status' ? <StatusBadge status={row[c[0]]} /> : c[2] === 'money' ? money(row[c[0]]) : row[c[0]]}</td>)}<td><div className="action-group"><button className="btn-mini view" onClick={() => alert(JSON.stringify(row, null, 2))}>Xem</button>{row.paymentStatus === 'PENDING' && <button className="btn-mini edit" onClick={() => handlePayment(row)}>Thanh toán</button>}</div></td></tr>)}</tbody></table></div>
+      <div className="table-card"><table className="data-table"><thead><tr>{config.columns.map(c => <th key={c[0]}>{c[1]}</th>)}<th>Hành động</th></tr></thead><tbody>{filtered.map(row => <tr key={row.id}>{config.columns.map(c => (
+                  <td key={c[0]}>
+                    {c[2] === 'status' ? (
+                      <select
+                        value={row[c[0]]}
+                        onChange={(e) => changeStatus(row, e.target.value)}
+                        className={`status-badge ${String(row[c[0]] || '').toLowerCase().replaceAll('_', '-')}`}
+                      >
+                        <option value="PENDING">Chờ thanh toán</option>
+                        <option value="PAID">Đã thanh toán</option>
+                      </select>
+                    ) : c[2] === 'money' ? (
+                      money(row[c[0]])
+                    ) : (
+                      row[c[0]]
+                    )}
+                  </td>
+                ))}<td><div className="action-group"><button className="btn-mini view" onClick={() => setViewing(row)}>Xem</button>{row.paymentStatus === 'PENDING' && <button className="btn-mini edit" onClick={() => handlePayment(row)}>Thanh toán</button>}</div></td></tr>)}</tbody></table></div>
+      {viewing && (
+        <InvoiceDetailModal
+          row={viewing}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </div>
   );
 }

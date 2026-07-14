@@ -33,7 +33,13 @@ export const statusClass = (status) => {
   return 'warning';
 };
 
-export const getServiceImage = (service) => service?.image || service?.imageUrl || service?.thumbnail || '';
+export const getServiceImage = (service) => {
+  const img = service?.image || service?.imageUrl || service?.thumbnail || '';
+  if (img && !img.startsWith('http') && img.startsWith('/uploads')) {
+    return 'http://localhost:8080' + img;
+  }
+  return img;
+};
 
 export const serviceOfAppointment = (appointment) => {
   const details = Array.isArray(appointment?.appointmentDetails)

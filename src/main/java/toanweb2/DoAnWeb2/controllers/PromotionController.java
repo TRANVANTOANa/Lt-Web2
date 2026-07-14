@@ -9,6 +9,7 @@ import toanweb2.DoAnWeb2.service.PromotionService;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/promotions")
@@ -47,6 +48,12 @@ public class PromotionController {
         return ResponseEntity.ok(Map.of("valid", promotionService.isValidPromotion(code)));
     }
 
+    /** Lấy tất cả khuyến mãi ACTIVE đang áp dụng cho 1 dịch vụ cụ thể */
+    @GetMapping("/service/{serviceId}")
+    public ResponseEntity<List<Promotion>> getByServiceId(@PathVariable Long serviceId) {
+        return ResponseEntity.ok(promotionService.findByServiceId(serviceId));
+    }
+
     @PostMapping
     public ResponseEntity<Promotion> createPromotion(@RequestBody Promotion promotion) {
         return ResponseEntity.status(HttpStatus.CREATED).body(promotionService.save(promotion));
@@ -55,6 +62,14 @@ public class PromotionController {
     @PutMapping("/{id}")
     public ResponseEntity<Promotion> updatePromotion(@PathVariable Long id, @RequestBody Promotion promotion) {
         return ResponseEntity.ok(promotionService.update(id, promotion));
+    }
+
+    /** Cập nhật danh sách dịch vụ được áp dụng cho 1 khuyến mãi */
+    @PutMapping("/{id}/services")
+    public ResponseEntity<Promotion> setApplicableServices(
+            @PathVariable Long id,
+            @RequestBody Set<Long> serviceIds) {
+        return ResponseEntity.ok(promotionService.setApplicableServices(id, serviceIds));
     }
 
     @DeleteMapping("/{id}")

@@ -36,6 +36,11 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
+    public List<Review> findByAppointmentId(Long appointmentId) {
+        return reviewRepository.findByAppointmentId(appointmentId);
+    }
+
+    @Override
     public Review save(Review review) {
         return reviewRepository.save(review);
     }

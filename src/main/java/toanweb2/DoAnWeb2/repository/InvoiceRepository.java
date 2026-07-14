@@ -14,6 +14,7 @@ import java.util.List;
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByCustomerId(Long customerId);
     List<Invoice> findByPaymentStatus(String paymentStatus);
+    java.util.Optional<Invoice> findByAppointmentId(Long appointmentId);
 
     @Query("SELECT i FROM Invoice i WHERE i.createdAt BETWEEN :startDate AND :endDate")
     List<Invoice> findByDateRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);

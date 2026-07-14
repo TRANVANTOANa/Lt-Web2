@@ -10,4 +10,5 @@ import java.util.List;
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByCustomerId(Long customerId);
     List<Review> findByServiceId(Long serviceId);
+    List<Review> findByAppointmentId(Long appointmentId);
 }

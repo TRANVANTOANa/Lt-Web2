@@ -41,6 +41,7 @@ public class RoomServiceImpl implements RoomService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phòng với ID: " + id));
         existing.setRoomName(room.getRoomName());
         existing.setDescription(room.getDescription());
+        existing.setImage(room.getImage());
         existing.setStatus(room.getStatus());
         return roomRepository.save(existing);
     }

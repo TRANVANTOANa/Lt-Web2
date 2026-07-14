@@ -36,6 +36,14 @@ public class Appointment {
     @JoinColumn(name = "service_id")
     private SpaService service;
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "appointment_services",
+        joinColumns = @JoinColumn(name = "appointment_id"),
+        inverseJoinColumns = @JoinColumn(name = "service_id")
+    )
+    private java.util.List<SpaService> services;
+
     @Column(nullable = false)
     private LocalDate appointmentDate;
 
@@ -52,18 +60,37 @@ public class Appointment {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "promotion_id")
+    private Promotion promotion;
+
     private LocalDateTime createdAt;
 
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties("appointment")
     @OneToOne(mappedBy = "appointment")
     private Invoice invoice;
+
+    @Transient
+    private String paymentMethod;
 
     @Transient
     @com.fasterxml.jackson.annotation.JsonProperty("appointmentDetails")
     private java.util.List<java.util.Map<String, Object>> appointmentDetails;
 
     public java.util.List<java.util.Map<String, Object>> getAppointmentDetails() {
-        if (this.service != null) {
+        if (this.services != null && !this.services.isEmpty()) {
+            java.util.List<java.util.Map<String, Object>> details = new java.util.ArrayList<>();
+            for (SpaService svc : this.services) {
+                java.util.Map<String, Object> detail = new java.util.HashMap<>();
+                detail.put("id", this.id);
+                detail.put("service", svc);
+                // Try to use individual service price/duration if possible, otherwise fall back to appointment fields
+                detail.put("price", svc.getPrice() != null ? svc.getPrice() : this.price);
+                detail.put("duration", svc.getDuration() != null ? svc.getDuration() : this.duration);
+                details.add(detail);
+            }
+            return details;
+        } else if (this.service != null) {
             java.util.Map<String, Object> detail = new java.util.HashMap<>();
             detail.put("id", this.id);
             detail.put("service", this.service);
