@@ -9,4 +9,5 @@ COPY --from=build /app/target/DoAnWeb2-0.0.1-SNAPSHOT.jar app.jar
 # Copy the existing uploads folder so current demo images are bundled in the container
 COPY --from=build /app/uploads /app/uploads
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","/app.jar"]
+ENTRYPOINT ["java","-jar","/app/app.jar"]
+
