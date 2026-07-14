@@ -1,6 +1,7 @@
 package toanweb2.DoAnWeb2.controllers;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
@@ -18,6 +19,9 @@ public class VNPayController {
 
     private final VNPayService vnPayService;
 
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
+
     @GetMapping("/create-payment")
     public ResponseEntity<Map<String, String>> createPayment(
             @RequestParam Long appointmentId,
@@ -34,9 +38,9 @@ public class VNPayController {
         boolean success = vnPayService.handleCallback(queryParams);
         
         if (success) {
-            return new RedirectView("http://localhost:5174/appointments/" + txnRef + "?payment=success");
+            return new RedirectView(frontendUrl + "/appointments/" + txnRef + "?payment=success");
         } else {
-            return new RedirectView("http://localhost:5174/appointments/" + txnRef + "?payment=fail");
+            return new RedirectView(frontendUrl + "/appointments/" + txnRef + "?payment=fail");
         }
     }
 }
