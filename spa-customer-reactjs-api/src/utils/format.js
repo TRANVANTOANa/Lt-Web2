@@ -36,7 +36,9 @@ export const statusClass = (status) => {
 export const getServiceImage = (service) => {
   const img = service?.image || service?.imageUrl || service?.thumbnail || '';
   if (img && !img.startsWith('http') && img.startsWith('/uploads')) {
-    return 'http://localhost:8080' + img;
+    const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+    const host = apiURL.replace('/api', '');
+    return host + img;
   }
   return img;
 };

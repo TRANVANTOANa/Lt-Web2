@@ -85,9 +85,9 @@ export default function Profile() {
           'Content-Type': 'multipart/form-data'
         }
       });
-      const fileUrl = res.url || res.data?.url || res;
-      // Serve locally on base URL
-      const fullUrl = fileUrl.startsWith('http') ? fileUrl : `http://localhost:8080${fileUrl}`;
+      const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+      const host = apiURL.replace('/api', '');
+      const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${host}${fileUrl}`;
       update('imageUrl', fullUrl);
     } catch (err) {
       setError('Tải ảnh lên thất bại: ' + (err.message || err));
