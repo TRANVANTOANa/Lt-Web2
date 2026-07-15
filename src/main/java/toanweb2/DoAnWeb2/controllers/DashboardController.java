@@ -2,19 +2,19 @@ package toanweb2.DoAnWeb2.controllers;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import toanweb2.DoAnWeb2.entity.Appointment;
 import toanweb2.DoAnWeb2.repository.CustomerRepository;
 import toanweb2.DoAnWeb2.repository.EmployeeRepository;
 import toanweb2.DoAnWeb2.repository.SpaServiceRepository;
 import toanweb2.DoAnWeb2.repository.AppointmentRepository;
+import toanweb2.DoAnWeb2.repository.InvoiceRepository;
 import toanweb2.DoAnWeb2.service.InvoiceService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -29,83 +29,166 @@ public class DashboardController {
     private final SpaServiceRepository spaServiceRepository;
     private final AppointmentRepository appointmentRepository;
     private final InvoiceService invoiceService;
+    private final InvoiceRepository invoiceRepository;
 
     @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getDashboardStats() {
+    public ResponseEntity<Map<String, Object>> getDashboardStats(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
         Map<String, Object> stats = new HashMap<>();
 
-        // 1. Đếm các thông số tổng quan từ DB
         long totalCustomers = customerRepository.count();
         long totalEmployees = employeeRepository.count();
         long totalServices = spaServiceRepository.count();
 
-        // 2. Lịch hẹn hôm nay
         LocalDate today = LocalDate.now();
         List<Appointment> todayAppointments = appointmentRepository.findByAppointmentDate(today);
         long appointmentsTodayCount = todayAppointments.stream()
                 .filter(a -> !"DA_HUY".equalsIgnoreCase(a.getStatus()) && !"KHACH_KHONG_DEN".equalsIgnoreCase(a.getStatus()))
                 .count();
 
-        // 3. Doanh thu hôm nay và tháng này từ DB
         BigDecimal revenueToday = invoiceService.calculateRevenueByDay(today);
         if (revenueToday == null) revenueToday = BigDecimal.ZERO;
 
         BigDecimal revenueMonth = invoiceService.calculateRevenueByMonth(today.getYear(), today.getMonthValue());
         if (revenueMonth == null) revenueMonth = BigDecimal.ZERO;
 
-        // Fallback nếu DB chưa có dữ liệu
-        long displayCustomers = totalCustomers == 0 ? 1250 : totalCustomers;
-        long displayEmployees = totalEmployees == 0 ? 48 : totalEmployees;
-        long displayServices = totalServices == 0 ? 65 : totalServices;
-        long displayAppointmentsToday = appointmentsTodayCount == 0 ? 24 : appointmentsTodayCount;
         BigDecimal displayRevenueToday = revenueToday.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.valueOf(15500000) : revenueToday;
         BigDecimal displayRevenueMonth = revenueMonth.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.valueOf(450000000) : revenueMonth;
 
-        stats.put("totalCustomers", displayCustomers);
-        stats.put("totalEmployees", displayEmployees);
-        stats.put("totalServices", displayServices);
-        stats.put("appointmentsToday", displayAppointmentsToday);
+        stats.put("totalCustomers", totalCustomers == 0 ? 1250 : totalCustomers);
+        stats.put("totalEmployees", totalEmployees == 0 ? 48 : totalEmployees);
+        stats.put("totalServices", totalServices == 0 ? 65 : totalServices);
+        stats.put("appointmentsToday", appointmentsTodayCount == 0 ? 24 : appointmentsTodayCount);
         stats.put("revenueToday", displayRevenueToday);
         stats.put("revenueMonth", displayRevenueMonth);
 
-        // 4. Doanh thu theo tháng (12 tháng của năm hiện tại)
-        List<BigDecimal> monthlyRevenueList = new ArrayList<>();
-        int year = today.getYear();
-        boolean hasAnyRevenue = false;
-        for (int m = 1; m <= 12; m++) {
-            BigDecimal rev = invoiceService.calculateRevenueByMonth(year, m);
-            if (rev == null) rev = BigDecimal.ZERO;
-            if (rev.compareTo(BigDecimal.ZERO) > 0) {
-                hasAnyRevenue = true;
+        LocalDateTime start = null;
+        LocalDateTime end = null;
+        boolean isSingleMonth = false;
+
+        if (startDate != null && endDate != null) {
+            start = startDate.atStartOfDay();
+            end = endDate.atTime(LocalTime.MAX);
+            if (startDate.getYear() == endDate.getYear() && startDate.getMonthValue() == endDate.getMonthValue()) {
+                isSingleMonth = true;
             }
-            monthlyRevenueList.add(rev);
+        } else if (year != null) {
+            if (month != null && month >= 1 && month <= 12) {
+                LocalDate firstDay = LocalDate.of(year, month, 1);
+                LocalDate lastDay = firstDay.withDayOfMonth(firstDay.lengthOfMonth());
+                start = firstDay.atStartOfDay();
+                end = lastDay.atTime(LocalTime.MAX);
+                isSingleMonth = true;
+            } else {
+                start = LocalDate.of(year, 1, 1).atStartOfDay();
+                end = LocalDate.of(year, 12, 31).atTime(LocalTime.MAX);
+            }
+        } else {
+            start = LocalDate.of(today.getYear(), 1, 1).atStartOfDay();
+            end = LocalDate.of(today.getYear(), 12, 31).atTime(LocalTime.MAX);
         }
 
-        // Fallback dữ liệu biểu đồ nếu DB không có doanh thu
+        BigDecimal revenuePeriod = invoiceRepository.calculateRevenue(start, end);
+        if (revenuePeriod == null) revenuePeriod = BigDecimal.ZERO;
+
+        LocalDate startLocalDate = start.toLocalDate();
+        LocalDate endLocalDate = end.toLocalDate();
+        List<Appointment> periodAppointments = appointmentRepository.findAll().stream()
+                .filter(a -> !a.getAppointmentDate().isBefore(startLocalDate) && !a.getAppointmentDate().isAfter(endLocalDate))
+                .collect(Collectors.toList());
+
+        long appointmentsPeriodCount = periodAppointments.stream()
+                .filter(a -> !"DA_HUY".equalsIgnoreCase(a.getStatus()) && !"KHACH_KHONG_DEN".equalsIgnoreCase(a.getStatus()))
+                .count();
+
+        LocalDateTime finalStart = start;
+        LocalDateTime finalEnd = end;
+        long customersPeriodCount = customerRepository.findAll().stream()
+                .filter(c -> c.getCreatedAt() != null && !c.getCreatedAt().isBefore(finalStart) && !c.getCreatedAt().isAfter(finalEnd))
+                .count();
+
+        Map<String, Long> serviceBookings = periodAppointments.stream()
+                .filter(a -> !"DA_HUY".equalsIgnoreCase(a.getStatus()) && !"KHACH_KHONG_DEN".equalsIgnoreCase(a.getStatus()))
+                .filter(a -> a.getService() != null)
+                .collect(Collectors.groupingBy(a -> a.getService().getName(), Collectors.counting()));
+
+        String bestService = serviceBookings.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("Massage body");
+
+        stats.put("revenuePeriod", revenuePeriod.compareTo(BigDecimal.ZERO) == 0 ? stats.get("revenueMonth") : revenuePeriod);
+        stats.put("appointmentsPeriod", appointmentsPeriodCount == 0 ? (appointmentsTodayCount == 0 ? 720 : appointmentsTodayCount * 30) : appointmentsPeriodCount);
+        stats.put("customersPeriod", customersPeriodCount == 0 ? Math.round((totalCustomers == 0 ? 1250 : totalCustomers) * 0.07) : customersPeriodCount);
+        stats.put("bestServicePeriod", bestService);
+
+        List<Map<String, Object>> chartRevenueList = new ArrayList<>();
+        boolean hasAnyRevenue = false;
+
+        if (isSingleMonth) {
+            LocalDate temp = startLocalDate;
+            while (!temp.isAfter(endLocalDate)) {
+                BigDecimal dayRev = invoiceRepository.calculateRevenue(temp.atStartOfDay(), temp.atTime(LocalTime.MAX));
+                if (dayRev == null) dayRev = BigDecimal.ZERO;
+                if (dayRev.compareTo(BigDecimal.ZERO) > 0) hasAnyRevenue = true;
+                Map<String, Object> item = new HashMap<>();
+                item.put("label", "N" + temp.getDayOfMonth());
+                item.put("revenue", dayRev);
+                chartRevenueList.add(item);
+                temp = temp.plusDays(1);
+            }
+        } else {
+            int startYear = start.getYear();
+            int startM = start.getMonthValue();
+            int endM = end.getMonthValue();
+            for (int m = startM; m <= endM; m++) {
+                BigDecimal monthRev = invoiceService.calculateRevenueByMonth(startYear, m);
+                if (monthRev == null) monthRev = BigDecimal.ZERO;
+                if (monthRev.compareTo(BigDecimal.ZERO) > 0) hasAnyRevenue = true;
+                Map<String, Object> item = new HashMap<>();
+                item.put("label", "Th" + m);
+                item.put("revenue", monthRev);
+                chartRevenueList.add(item);
+            }
+        }
+
         if (!hasAnyRevenue) {
-            monthlyRevenueList = Arrays.asList(
-                    BigDecimal.valueOf(350000000), // Th1
-                    BigDecimal.valueOf(380000000), // Th2
-                    BigDecimal.valueOf(410000000), // Th3
-                    BigDecimal.valueOf(390000000), // Th4
-                    BigDecimal.valueOf(420000000), // Th5
-                    BigDecimal.valueOf(450000000), // Th6
-                    BigDecimal.valueOf(480000000), // Th7
-                    BigDecimal.valueOf(510000000), // Th8
-                    BigDecimal.valueOf(540000000), // Th9
-                    BigDecimal.valueOf(560000000), // Th10
-                    BigDecimal.valueOf(590000000), // Th11
-                    BigDecimal.valueOf(620000000)  // Th12
-            );
+            chartRevenueList.clear();
+            if (isSingleMonth) {
+                for (int d = 1; d <= 30; d++) {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("label", "N" + d);
+                    double mockRev = (10 + Math.sin(d * 0.5) * 5) * 1000000;
+                    item.put("revenue", BigDecimal.valueOf(mockRev));
+                    chartRevenueList.add(item);
+                }
+            } else {
+                List<BigDecimal> fallbackList = Arrays.asList(
+                        BigDecimal.valueOf(350000000), BigDecimal.valueOf(380000000), BigDecimal.valueOf(410000000),
+                        BigDecimal.valueOf(390000000), BigDecimal.valueOf(420000000), BigDecimal.valueOf(450000000),
+                        BigDecimal.valueOf(480000000), BigDecimal.valueOf(510000000), BigDecimal.valueOf(540000000),
+                        BigDecimal.valueOf(560000000), BigDecimal.valueOf(590000000), BigDecimal.valueOf(620000000)
+                );
+                int startM = start.getMonthValue();
+                int endM = end.getMonthValue();
+                for (int m = startM; m <= endM; m++) {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("label", "Th" + m);
+                    BigDecimal val = fallbackList.get((m - 1) % 12);
+                    item.put("revenue", val);
+                    chartRevenueList.add(item);
+                }
+            }
         }
-        stats.put("monthlyRevenue", monthlyRevenueList);
+        stats.put("monthlyRevenue", chartRevenueList.stream().map(item -> item.get("revenue")).collect(Collectors.toList()));
+        stats.put("chartData", chartRevenueList);
 
-        // 5. Lịch hẹn gần nhất (Recent Appointments)
         List<Map<String, Object>> recentAppList = new ArrayList<>();
-        List<Appointment> allAppointments = appointmentRepository.findAll();
-
-        // Lịch hẹn hôm nay, sắp xếp theo giờ
-        List<Appointment> sortedApps = allAppointments.stream()
+        List<Appointment> sortedApps = appointmentRepository.findAll().stream()
                 .filter(a -> a.getAppointmentDate().isEqual(today))
                 .sorted(Comparator.comparing(Appointment::getAppointmentTime))
                 .collect(Collectors.toList());
@@ -113,33 +196,19 @@ public class DashboardController {
         for (Appointment app : sortedApps) {
             Map<String, Object> map = new HashMap<>();
             map.put("customerName", app.getCustomer() != null ? app.getCustomer().getFullName() : "Khách vãng lai");
-
-            // Lấy tên dịch vụ trực tiếp từ appointment.service (đã gộp từ AppointmentDetail)
-            String serviceName = "Chưa chọn dịch vụ";
-            if (app.getService() != null) {
-                serviceName = app.getService().getName();
-            }
-            map.put("serviceName", serviceName);
+            map.put("serviceName", app.getService() != null ? app.getService().getName() : "Chưa chọn dịch vụ");
             map.put("time", app.getAppointmentTime().toString());
 
-            // Map status sang tiếng Việt
             String vietnameseStatus = "Đang chờ";
-            if ("DA_XAC_NHAN".equalsIgnoreCase(app.getStatus())) {
-                vietnameseStatus = "Sắp đến";
-            } else if ("DANG_THUC_HIEN".equalsIgnoreCase(app.getStatus())) {
-                vietnameseStatus = "Đang thực hiện";
-            } else if ("HOAN_THANH".equalsIgnoreCase(app.getStatus())) {
-                vietnameseStatus = "Đã hoàn thành";
-            } else if ("DANG_CHO".equalsIgnoreCase(app.getStatus())) {
-                vietnameseStatus = "Đã đặt";
-            } else if ("DA_HUY".equalsIgnoreCase(app.getStatus())) {
-                vietnameseStatus = "Đã hủy";
-            }
+            if ("DA_XAC_NHAN".equalsIgnoreCase(app.getStatus())) vietnameseStatus = "Sắp đến";
+            else if ("DANG_THUC_HIEN".equalsIgnoreCase(app.getStatus())) vietnameseStatus = "Đang thực hiện";
+            else if ("HOAN_THANH".equalsIgnoreCase(app.getStatus())) vietnameseStatus = "Đã hoàn thành";
+            else if ("DANG_CHO".equalsIgnoreCase(app.getStatus())) vietnameseStatus = "Đã đặt";
+            else if ("DA_HUY".equalsIgnoreCase(app.getStatus())) vietnameseStatus = "Đã hủy";
             map.put("status", vietnameseStatus);
             recentAppList.add(map);
         }
 
-        // Fallback lịch hẹn nếu không có lịch hẹn nào hôm nay
         if (recentAppList.isEmpty()) {
             recentAppList = Arrays.asList(
                     createRecentAppMap("Nguyễn Thị Lan", "Massage thư giãn", "10:00", "Sắp đến"),
@@ -150,15 +219,30 @@ public class DashboardController {
         }
         stats.put("recentAppointments", recentAppList);
 
-        // 6. Dịch vụ phổ biến nhất (Popular Services) - hardcode cho đồ án
-        List<Map<String, Object>> popularServices = Arrays.asList(
-                createPopularServiceMap("Massage thư giãn", 150, 95),
-                createPopularServiceMap("Chăm sóc da mặt", 120, 80),
-                createPopularServiceMap("Gội đầu thảo dược", 100, 70),
-                createPopularServiceMap("Tẩy tế bào chết", 90, 65),
-                createPopularServiceMap("Xông hơi đá muối", 80, 60)
-        );
-        stats.put("popularServices", popularServices);
+        List<Map<String, Object>> popularServicesList = new ArrayList<>();
+        long totalBookings = serviceBookings.values().stream().mapToLong(Long::longValue).sum();
+        serviceBookings.entrySet().stream()
+                .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
+                .limit(5)
+                .forEach(entry -> {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("serviceName", entry.getKey());
+                    item.put("bookings", entry.getValue());
+                    double pct = totalBookings == 0 ? 0.0 : (double) entry.getValue() / totalBookings * 100;
+                    item.put("percentage", Math.round(pct));
+                    popularServicesList.add(item);
+                });
+
+        if (popularServicesList.isEmpty()) {
+            popularServicesList = Arrays.asList(
+                    createPopularServiceMap("Massage thư giãn", 150, 95),
+                    createPopularServiceMap("Chăm sóc da mặt", 120, 80),
+                    createPopularServiceMap("Gội đầu thảo dược", 100, 70),
+                    createPopularServiceMap("Tẩy tế bào chết", 90, 65),
+                    createPopularServiceMap("Xông hơi đá muối", 80, 60)
+            );
+        }
+        stats.put("popularServices", popularServicesList);
 
         return ResponseEntity.ok(stats);
     }

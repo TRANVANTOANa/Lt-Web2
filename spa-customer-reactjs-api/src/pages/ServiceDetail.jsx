@@ -5,6 +5,8 @@ import { serviceApi } from '../api/serviceApi';
 import { reviewApi } from '../api/reviewApi';
 import ErrorBox from '../components/ErrorBox';
 import Loading from '../components/Loading';
+import ServiceCard from '../components/ServiceCard';
+import axiosClient from '../api/axiosClient';
 import { mockServices } from '../data/mockData';
 import { money, getServiceImage, dateText } from '../utils/format';
 
@@ -28,6 +30,7 @@ export default function ServiceDetail() {
   const { id } = useParams();
   const [service, setService] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [relatedServices, setRelatedServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -39,9 +42,56 @@ export default function ServiceDetail() {
         const data = await serviceApi.getById(id);
         setService(data);
         reviewApi.getByService(id).then(setReviews).catch(() => setReviews([]));
+
+        let relatedList = [];
+        if (data.category?.id) {
+          try {
+            relatedList = await serviceApi.getByCategory(data.category.id);
+          } catch (err) {
+            relatedList = [];
+          }
+        }
+
+        let filtered = (relatedList || []).filter((s) => String(s.id) !== String(id));
+
+        if (filtered.length === 0) {
+          try {
+            const activeList = await serviceApi.getActive();
+            filtered = (activeList || []).filter((s) => String(s.id) !== String(id));
+          } catch (err) {
+            filtered = [];
+          }
+        }
+
+        let promoList = [];
+        try {
+          const promos = await axiosClient.get('/promotions/active');
+          promoList = Array.isArray(promos) ? promos : [];
+        } catch (err) {
+          promoList = [];
+        }
+
+        const attached = filtered.map(svc => ({
+          ...svc,
+          promotions: promoList.filter(p =>
+            (p.applicableServices || []).some(s => s.id === svc.id)
+          )
+        }));
+
+        setRelatedServices(attached.slice(0, 4));
       } catch (err) {
         setError('Không tải được API chi tiết, đang hiển thị dữ liệu mẫu.');
-        setService(mockServices.find((s) => String(s.id) === String(id)) || mockServices[0]);
+        const fallbackService = mockServices.find((s) => String(s.id) === String(id)) || mockServices[0];
+        setService(fallbackService);
+
+        let filteredMock = mockServices.filter(
+          (s) => String(s.id) !== String(fallbackService.id) &&
+                 s.category?.name === fallbackService.category?.name
+        );
+        if (filteredMock.length === 0) {
+          filteredMock = mockServices.filter((s) => String(s.id) !== String(fallbackService.id));
+        }
+        setRelatedServices(filteredMock.slice(0, 4));
       } finally {
         setLoading(false);
       }
@@ -277,6 +327,25 @@ export default function ServiceDetail() {
           </div>
         )}
       </section>
+
+      {/* ===== RELATED SERVICES SECTION ===== */}
+      {relatedServices.length > 0 && (
+        <>
+          <hr style={{ border: '0', height: '1px', background: 'linear-gradient(90deg, transparent, var(--line) 50%, transparent)', margin: '64px 0' }} />
+          <section className="related-services" style={{ marginBottom: '40px' }}>
+            <div className="section-head center">
+              <span className="eyebrow">Khám phá thêm</span>
+              <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#4a3840', margin: '10px 0 0' }}>Dịch vụ liên quan</h2>
+              <p style={{ color: '#8a7580', marginTop: '6px' }}>Các liệu trình chăm sóc sắc đẹp và sức khỏe phù hợp khác tại Spa</p>
+            </div>
+            <div className="service-grid">
+              {relatedServices.map((svc) => (
+                <ServiceCard key={svc.id} service={svc} />
+              ))}
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 }

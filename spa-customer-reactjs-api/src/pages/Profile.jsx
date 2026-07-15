@@ -85,6 +85,10 @@ export default function Profile() {
           'Content-Type': 'multipart/form-data'
         }
       });
+      const fileUrl = typeof res === 'string' ? res : res?.url || res?.data || '';
+      if (!fileUrl) {
+        throw new Error('Không nhận được đường dẫn ảnh từ máy chủ');
+      }
       const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
       const host = apiURL.replace('/api', '');
       const fullUrl = fileUrl.startsWith('http') ? fileUrl : `${host}${fileUrl}`;
