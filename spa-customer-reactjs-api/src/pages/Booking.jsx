@@ -10,7 +10,7 @@ import ErrorBox from '../components/ErrorBox';
 import Loading from '../components/Loading';
 import { useAuth } from '../context/AuthContext';
 import { mockEmployees, mockRooms, mockServices } from '../data/mockData';
-import { money } from '../utils/format';
+import { money, getServiceImage } from '../utils/format';
 import { Check, User, Search } from 'lucide-react';
 
 const defaultForm = {
@@ -267,8 +267,9 @@ export default function Booking() {
       'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=300&auto=format&fit=crop',
       'https://images.unsplash.com/photo-1519699047748-de8e457a634e?q=80&w=300&auto=format&fit=crop'
     ];
+    const apiImage = getServiceImage(service);
     return {
-      image: images[idx],
+      image: apiImage || images[idx],
       duration: service?.duration || [60, 90, 75, 45][idx],
     };
   };
